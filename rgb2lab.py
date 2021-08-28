@@ -1,4 +1,11 @@
 # coding=utf-8
+'''
+直接rgb值计算M矩阵, 得到lab值.
+
+'''
+
+
+
 import json
 import numpy as np
 from numpy.linalg import solve
