@@ -1,4 +1,10 @@
 # coding=utf-8
+'''
+rgb2xyz, 拆分成3个model, 分别完成: rgb2x rgb2y rgb2z
+xgboost
+
+'''
+
 import json
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
 import xgboost as xgb
