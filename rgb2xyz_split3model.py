@@ -74,7 +74,14 @@ with open(r'./all_data_lab.json', 'w') as js_file:
 #         print("test all size: {}, ok size: {}, percent: {}".format(c, d, d/c))
 #         scores.append(mean_squared_error(y_test, y_pred))
 def cross_val(X, Y, index, green_blue, rgb_ImgName, ff):
-    X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=420)
+    X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=88)
+
+    # 查看train中异常样本数量
+    for ii, item in enumerate(X_train):
+        value = ''.join(str(int(a)) for a in X_train[ii]) + str(y_train[ii])
+        key_ = rgb_ImgName[value]
+        if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
+            print(key_, '=====')
 
     scores = []
 
@@ -171,13 +178,13 @@ def load_data(json_x, json_y, index, green_blue):
     for k, v in json_x.items():
         dir_index = int(k.split('_')[0])
         if not green_blue:
-            if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_5"]:
+            if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 X.append([float(a) for a in json_x[k]])
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
-                # rgb_ImgName[''.join(a for a in json_x[k]) + str(v_[index])] = k
+                rgb_ImgName[''.join(a for a in json_x[k]) + str(v_[index])] = k
         else:
-            if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_5"]:
+            if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 X.append([float(a) for a in json_x[k]])
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
@@ -198,7 +205,7 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 0
+    green_blue = 1
 
     flags = ['x', 'y', 'z']
     ff = open(r'./bad_blue.txt', 'w')
@@ -209,8 +216,20 @@ if __name__ == "__main__":
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        hyperparameter_searching(X, Y, i, green_blue)
+        # hyperparameter_searching(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName, ff)
         ff.write("\n")
 
         print('\n')
+
+
+        # 蓝绿样本划分
+        # for k, v in js_x.items():
+        #     v = [int(a) for a in v]
+        #     dir_index = int(k.split('_')[0])
+        #     # rgb 判断g值是否大于b值即可.
+        #     if v[1] > v[2]:
+        #         if dir_index > 21:
+        #             print(k, '==')
+
+
