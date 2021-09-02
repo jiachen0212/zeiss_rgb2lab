@@ -81,7 +81,7 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName, ff):
 
     # 查看train中异常样本数量
     for ii, item in enumerate(X_train):
-        value = ''.join(str(int(a)) for a in X_train[ii]) + str(y_train[ii])
+        value = ''.join(str(a) for a in X_train[ii]) + str(y_train[ii])
         key_ = rgb_ImgName[value]
         if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
             print(key_, '=====')
@@ -102,7 +102,7 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName, ff):
     # test all data
     y_pred = xgb_model.predict(X)
     for index, item in enumerate(y_pred):
-        value = ''.join(str(int(a)) for a in X[index]) + str(Y[index])
+        value = ''.join(str(a) for a in X[index]) + str(Y[index])
         info = rgb_ImgName[value]
         xyz_res[info] = str(item)
 
@@ -195,16 +195,18 @@ def load_data(json_x, json_y, index, green_blue):
         dir_index = int(k.split('_')[0])
         if not green_blue:
             if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-                X.append([float(a) for a in json_x[k]])
+                r_, g_, b_ = [float(a)/255 for a in json_x[k]]
+                X.append([r_, g_, b_])
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
-                rgb_ImgName[''.join(a for a in json_x[k]) + str(v_[index])] = k
+                # print([r_, g_, b_])
+                rgb_ImgName[''.join(str(int(a)/255) for a in json_x[k]) + str(v_[index])] = k
         else:
             if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 X.append([float(a) for a in json_x[k]])
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
-                rgb_ImgName[''.join(a for a in json_x[k]) + str(v_[index])] = k
+                rgb_ImgName[''.join(str(int(a)/255) for a in json_x[k]) + str(v_[index])] = k
 
     X = np.array(X)
     Y = np.array(Y)
@@ -255,7 +257,7 @@ if __name__ == "__main__":
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        # hyperparameter_searching(X, Y, i, green_blue)
+        hyperparameter_searching(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName, ff)
         ff.write("\n")
 
@@ -291,9 +293,11 @@ if __name__ == "__main__":
     #                                                          abs(pre_b - real_b)))
     #         print('\n')
         elif abs(pre_l-real_l) >= 1 or abs(pre_a-real_a) >= 1 or abs(pre_b-real_b) >= 1:
-            print(k, js_y[k], pre_l, pre_a, pre_b)
-            print(k, real_x, real_y, real_z, x, y, z)
+            print("dir_name: {}, real lab: {}, pred lab: {}".format(k, js_y[k], [pre_l, pre_a, pre_b]))
+            print("dir_name: {}, real xyz: {}, pred xyz: {}".format(k, [real_x, real_y, real_z], [x, y, z]))
             print("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(x - real_x), abs(y - real_y), abs(z - real_z)))
             print("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a), abs(pre_b - real_b)))
             print('\n')
     print(c)
+
+
