@@ -219,6 +219,31 @@ def gamma(a):
 
     return a
 
+
+def show_rgb_gamma(org_rgb, gammed_rgb):
+    aa = [0, 1, 2]
+    plt.title(r"blue data: org and  gamma_ed")
+    for ii, rgb in enumerate(org_rgb):
+        if ii == 0:
+            plt.plot(aa, rgb, color='pink', label='org')
+            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue', label='gammaed')
+        else:
+            plt.plot(aa, rgb, color='pink')
+            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue')
+    plt.legend()
+    plt.show()
+
+
+
+def show_b_gamma(org_b_gammaes_b):
+    aa = [0, 1]
+    plt.title(r"gamma b")
+    for ii, b1b2 in enumerate(org_b_gammaes_b):
+        plt.scatter(aa, b1b2, color=colors[ii], s=2)
+    plt.show()
+
+
+
 def load_data(json_x, json_y, index, green_blue):
     org_b_gammaes_b = []
     org_rgb = []
@@ -261,26 +286,8 @@ def load_data(json_x, json_y, index, green_blue):
     print(X.shape)
     print(len(rgb_ImgName))
 
-    # show gamma change
-    # aa = [0, 1]
-    # plt.title(r"gamma b")
-    # for ii, b1b2 in enumerate(org_b_gammaes_b):
-    #     plt.scatter(aa, b1b2, color=colors[ii], s=2)
-    # plt.show()
-
-    aa = [0, 1, 2]
-    plt.title(r"blue data: org and  gamma_ed")
-    for ii, rgb in enumerate(org_rgb):
-        if ii == 0:
-            plt.plot(aa, rgb, color='pink', label='org')
-            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue', label='gammaed')
-        else:
-            plt.plot(aa, rgb, color='pink')
-            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue')
-    plt.legend()
-    plt.show()
-
-
+    # show_b_gamma(org_b_gammaes_b)
+    # show_rgb_gamma(org_rgb, gammed_rgb)
 
     return X, Y, rgb_ImgName
 
@@ -500,7 +507,7 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 0
+    green_blue = 1
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
@@ -512,7 +519,7 @@ if __name__ == "__main__":
 
         # use xgboost
         # hyperparameter_searching(X, Y, i, green_blue)
-        overfiting(X, Y, i, green_blue)
+        # overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
