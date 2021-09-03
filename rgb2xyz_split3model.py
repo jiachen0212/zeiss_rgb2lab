@@ -169,11 +169,12 @@ def hyperparameter_searching(X, y, index, green_blue):
     xgb_model = xgb.XGBRegressor()
     params = {
         "colsample_bytree": uniform(0.9, 0.1),
-        "gamma": uniform(0, 0.3),   # gamma越小, 模型越复杂..
+        "gamma": uniform(0, 0.),   # gamma越小, 模型越复杂..
         "learning_rate": uniform(0.01, 0.5),  # default 0.1
-        "max_depth": randint(2, 8),  # default 3
-        "n_estimators": randint(100, 120),  # default 100
+        "max_depth": randint(2, 10),  # default 3
+        "n_estimators": randint(80, 150),  # default 100
         "subsample": uniform(0.6, 0.4)
+
     }
 
     search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
@@ -210,7 +211,18 @@ def lab2xyz(l,a,b):
     return [x,y,z]
 
 
+def gamma(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/1.055, 2.4)
+    else:
+        a /= 12.92
+
+    return a
+
 def load_data(json_x, json_y, index, green_blue):
+    org_b_gammaes_b = []
+    org_rgb = []
+    gammed_rgb = []
     rgb_ImgName = dict()
     X , Y = [], []
     for k, v in json_x.items():
@@ -225,15 +237,50 @@ def load_data(json_x, json_y, index, green_blue):
         else:
             if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-                X.append([r_, g_, b_])
+                # if index == 2:
+                #     # 对b值进行gamma矫正
+                #     gamma_b_ = gamma(b_)
+                # else:
+                #     gamma_b_ = b_
+                # org_b_gammaes_b.append([b_, gamma_b_])
+                # X.append([r_, g_, gamma_b_])
+
+                org_rgb.append([r_, g_, b_])
+                # rgb均进行gamma矫正
+                gamma_r_ = gamma(r_)
+                gamma_g_ = gamma(g_)
+                gamma_b_ = gamma(b_)
+                gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
+                X.append([gamma_r_, gamma_g_, gamma_b_])
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
-                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
     X = np.array(X)
     Y = np.array(Y)
     print(X.shape)
     print(len(rgb_ImgName))
+
+    # show gamma change
+    # aa = [0, 1]
+    # plt.title(r"gamma b")
+    # for ii, b1b2 in enumerate(org_b_gammaes_b):
+    #     plt.scatter(aa, b1b2, color=colors[ii], s=2)
+    # plt.show()
+
+    aa = [0, 1, 2]
+    plt.title(r"blue data: org and  gamma_ed")
+    for ii, rgb in enumerate(org_rgb):
+        if ii == 0:
+            plt.plot(aa, rgb, color='pink', label='org')
+            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue', label='gammaed')
+        else:
+            plt.plot(aa, rgb, color='pink')
+            plt.plot(aa, gammed_rgb[ii], color='cornflowerblue')
+    plt.legend()
+    plt.show()
+
+
 
     return X, Y, rgb_ImgName
 
@@ -273,8 +320,22 @@ def split_blueand_green():
 
 
 
-
+from util import cnames
+colors = list(cnames.keys())
 def check_lab_res(js_x, js_y, ff):
+    aa = [i for i in range(3)]
+
+    f_bad_l = open(r'./bad_l.txt', 'w')
+    f_bad_a = open(r'./bad_a.txt', 'w')
+    f_bad_b = open(r'./bad_b.txt', 'w')
+    green_all_dict = dict()
+    blue_all_dict = dict()
+    bad_a_rgb = []
+    bad_a_dict = dict()
+    bad_b_dict = dict()
+    ok_a_rgb = []
+    bad_b_rgb = []
+
     x_pred = json.load(open(r'./xyz_0.json', 'r'))
     y_pred = json.load(open(r'./xyz_1.json', 'r'))
     z_pred = json.load(open(r'./xyz_2.json', 'r'))
@@ -286,40 +347,130 @@ def check_lab_res(js_x, js_y, ff):
         real_l, real_a, real_b = js_y[k]
         pre_x, pre_y, pre_z = float(x_pred[k]), float(y_pred[k]), float(z_pred[k])
         pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
-        real_x, real_y, real_z = lab2xyz(real_l, real_a, real_b)
 
         if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
             c += 1
 
-        else:
-            print("dir_name: {}".format(k))
-            print("rgb: {}".format(js_x[k]))
-            print("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]))
-            print("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a), abs(pre_b - real_b)))
-            print("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y), abs(pre_z - real_z)))
-            print('\n')
-
-            ff.write("dir_name: {}".format(k) + '\n')
-            ff.write("rgb: {}".format(js_x[k]) + '\n')
-            ff.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
-            ff.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
-                                                             abs(pre_b - real_b)) + '\n')
-            ff.write("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y),
-                                                             abs(pre_z - real_z)) + '\n')
-            ff.write('\n')
+        green_all_dict[''.join(a+',' for a in js_x[k])] = 1
+        # else:
+        #     print("dir_name: {}".format(k))
+        #     print("rgb: {}".format(js_x[k]))
+        #     print("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]))
+        #     print("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a), abs(pre_b - real_b)))
+        #     print("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y), abs(pre_z - real_z)))
+        #     print('\n')
+        #
+        #     ff.write("dir_name: {}".format(k) + '\n')
+        #     ff.write("rgb: {}".format(js_x[k]) + '\n')
+        #     ff.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+        #     ff.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+        #                                                      abs(pre_b - real_b)) + '\n')
+        #     ff.write("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y),
+        #                                                      abs(pre_z - real_z)) + '\n')
+        #     ff.write('\n')
 
         if abs(pre_l-real_l) > 0.5:
             bad_l += 1
+            f_bad_l.write(k + '\n')
+            f_bad_l.write("rgb: {}".format(js_x[k]) + '\n')
+            f_bad_l.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+            f_bad_l.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+                                                             abs(pre_b - real_b)) + '\n')
+
         if abs(pre_a-real_a) > 0.5:
             bad_a += 1
+            f_bad_a.write(k + '\n')
+            f_bad_a.write("rgb: {}".format(js_x[k]) + '\n')
+            f_bad_a.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+            f_bad_a.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+                                                                abs(pre_b - real_b)) + '\n')
+
+            bad_a_rgb.append([float(a) for a in js_x[k]])
+
+        else:
+            ok_a_rgb.append([float(a) for a in js_x[k]])
+
+        bad_a_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_a - real_a)
+
         if abs(pre_b-real_b) > 0.5:
             bad_b += 1
+            f_bad_b.write(k + '\n')
+            f_bad_b.write("rgb: {}".format(js_x[k]) + '\n')
+
+            f_bad_b.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+            f_bad_b.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+                                                                abs(pre_b - real_b)) + '\n')
+
+            bad_b_rgb.append([float(a) for a in js_x[k]])
+
+        bad_b_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_b - real_b)
 
 
     print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)))
     ff.write('\n')
     ff.write("bad_L: {}, bad_A:{}, bad_B:{}".format(bad_l, bad_a, bad_b) + '\n')
     ff.write("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)) + '\n')
+
+
+    # for ii, bad_a_rgb_ in enumerate(bad_a_rgb):
+    #     # plt.title('bad a: rgb')
+    #     # plt.scatter(aa, bad_a_rgb_, color=colors[ii], s=2)
+    #     plt.plot(aa, bad_a_rgb_, color='black')
+    # # plt.grid()
+    # # plt.show()
+    #
+    # for ii, bad_a_rgb_ in enumerate(ok_a_rgb):
+    #     # plt.title('ok a: rgb')
+    #     # plt.scatter(aa, bad_a_rgb_, color=colors[ii], s=2)
+    #     plt.plot(aa, bad_a_rgb_, color='pink')
+    # plt.grid()
+    # plt.show()
+
+    # for k, v in bad_a_dict.items():
+    #     r, g, b = k.split(',')[:-1]
+    #     r = float(r)
+    #     g = float(g)
+    #     b = float(b)
+    #     if v <= 0.5:
+    #         plt.plot(aa, [r, g, b], color='pink')
+    #     elif v > 0.7:
+    #         plt.plot(aa, [r, g, b], color='cornflowerblue')
+    #     # elif 0.5 < v < 0.7:
+    #     #     plt.plot(aa, [r, g, b], color='pink')
+    # plt.grid()
+    # plt.show()
+
+
+    # for k, v in bad_b_dict.items():
+    #     r, g, b = k.split(',')[:-1]
+    #     r = float(r)
+    #     g = float(g)
+    #     b = float(b)
+    #     if v <= 0.5:
+    #         plt.plot(aa, [r, g, b], color='pink')
+    #     # elif v > 0.7:
+    #     else:
+    #         plt.plot(aa, [r, g, b], color='cornflowerblue')
+    #     # elif 0.5 < v < 0.7:
+    #     #     plt.plot(aa, [r, g, b], color='pink')
+    # plt.grid()
+    # plt.show()
+
+    # cc = 0
+    # for k, v in green_all_dict.items():
+    #     plt.title("green samples")
+    #     cc += 1
+    #     r, g, b = k.split(',')[:-1]
+    #     r = float(r)
+    #     g = float(g)
+    #     b = float(b)
+    #     # if cc == 1:
+    #     #     plt.plot(aa, [r, g, b], color='pink')
+    #     # elif cc == 100:
+    #     #     plt.plot(aa, [r, g, b], color='cornflowerblue')
+    #     plt.plot(aa, [r, g, b], color='cornflowerblue')
+    # plt.grid()
+    # plt.show()
 
 
 
@@ -331,7 +482,7 @@ def overfiting(X, Y, index, green_blue):
 
     cvresult1 = xgb.cv(param1, dfull, num_round)
 
-    fig, ax = plt.subplots(1, figsize=(15, 8))
+    fig, ax = plt.subplots(1, figsize=(6,6))
     ax.set_ylim(top=5)
     ax.grid()
     ax.plot(range(1, 201), cvresult1.iloc[:, 0], c="red", label="train,original")
@@ -349,7 +500,7 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 1
+    green_blue = 0
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]

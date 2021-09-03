@@ -86,6 +86,26 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName):
     #         print(key_, '=====')
 
 
+    # # test
+    # dfull = xgb.DMatrix(X, Y)
+    # param1 = {'silent': True
+    #     , 'obj': 'reg:linear'
+    #     , "subsample": 1
+    #     , "max_depth": 6
+    #     , "eta": 0.3
+    #     , "gamma": 0
+    #     , "lambda": 1
+    #     , "alpha": 0
+    #     , "colsample_bytree": 1
+    #     , "colsample_bylevel": 1
+    #     , "colsample_bynode": 1
+    #     , "nfold": 5}
+    # num_round = 200
+    #
+    # cvresult1 = xgb.cv(param1, dfull, num_round)
+    # print(cvresult1, '-=-=-=-=')
+
+
     # hyperparameter_searching beat parameters
     parameters = json.load(open(r'./rgb2lab_parameter_{}_{}.json'.format(index, green_blue), 'r'))
 
@@ -126,23 +146,34 @@ def hyperparameter_searching(X, y, index, green_blue):
 
     if not green_blue:
         xgb_model = xgb.XGBRegressor()
+        # params = {
+        #     "colsample_bytree": uniform(0.9, 0.1),
+        #     "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
+        #     "learning_rate": uniform(0.01, 0.5),  # default 0.1
+        #     "max_depth": randint(2, 6),  # default 3
+        #     "n_estimators": randint(80, 120),  # default 100
+        #     "subsample": uniform(0.6, 0.4)
+        # }
+        xgb_model = xgb.XGBRegressor()
         params = {
             "colsample_bytree": uniform(0.9, 0.1),
-            "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
+            "gamma": uniform(0, 0.),  # gamma越小, 模型越复杂..
             "learning_rate": uniform(0.01, 0.5),  # default 0.1
-            "max_depth": randint(2, 6),  # default 3
-            "n_estimators": randint(80, 120),  # default 100
+            "max_depth": randint(2, 8),  # default 3
+            "n_estimators": randint(100, 150),  # default 100
             "subsample": uniform(0.6, 0.4)
+
         }
 
     else:
         xgb_model = xgb.XGBRegressor()
         params = {
-            "colsample_bytree": uniform(0.9, 0.1),
+            "colsample_bytree": uniform(0.7, 0.3),
+            "eta": 0.3,
             "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
-            "learning_rate": uniform(0.01, 0.3),  # default 0.1
-            "max_depth": randint(2, 6),  # default 3
-            "n_estimators": randint(80, 120),  # default 100
+            "learning_rate": uniform(0.01, 0.1),  # default 0.1
+            "max_depth": randint(2, 5),  # default 3
+            "n_estimators": randint(60, 80),  # default 100
             "subsample": uniform(0.6, 0.4)
         }
 
@@ -344,7 +375,7 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 1
+    green_blue = 0
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
@@ -356,7 +387,7 @@ if __name__ == "__main__":
 
         # use xgboost
         hyperparameter_searching(X, Y, i, green_blue)
-        overfiting(X, Y, i, green_blue)
+        # overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
