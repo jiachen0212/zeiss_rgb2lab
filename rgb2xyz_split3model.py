@@ -4,7 +4,8 @@ rgb2xyz, 拆分成3个model, 分别完成: rgb2x rgb2y rgb2z
 xgboost
 
 '''
-
+from util import cnames
+colors = list(cnames.keys())
 import json
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
 import xgboost as xgb
@@ -110,17 +111,6 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName):
     with open(single_xyz_res, 'w') as js_file:
         js_file.write(data)
 
-    # c, d = 0, 0
-    # for index, item in enumerate(y_pred):
-    #     c += 1
-    #     if abs(y_test[index] - y_pred[index]) <= 0.5:
-    #         d += 1
-    #     else:
-    #         value = ''.join(str(int(a)) for a in X_test[index]) + str(y_test[index])
-    #         info = str(rgb_ImgName[value]) + '\tdiff: ' + str(abs(y_test[index] - y_pred[index]))
-    #         print(X_test[index], y_test[index], info)
-    #         ff.write(info + '\n')
-    # print("test all size: {}, ok size: {}, percent: {}".format(c, d, d/c))
 
 
 def report_best_scores(results, index, green_blue, n_top=3):
@@ -220,9 +210,10 @@ def gamma(a):
     return a
 
 
-def show_rgb_gamma(org_rgb, gammed_rgb):
+def show_rgb_gamma(org_rgb, gammed_rgb, green_blue):
     aa = [0, 1, 2]
-    plt.title(r"blue data: org and  gamma_ed")
+    greenblue = ["green", "blue"]
+    plt.title(r"{} data: org and  gamma_ed".format(greenblue[green_blue]))
     for ii, rgb in enumerate(org_rgb):
         if ii == 0:
             plt.plot(aa, rgb, color='pink', label='org')
@@ -244,7 +235,7 @@ def show_b_gamma(org_b_gammaes_b):
 
 
 
-def load_data(json_x, json_y, index, green_blue):
+def load_data(json_x, json_y, index, green_blue, gammaed=False):
     X_dict = dict()
     org_b_gammaes_b = []
     org_rgb = []
@@ -253,35 +244,59 @@ def load_data(json_x, json_y, index, green_blue):
     X , Y = [], []
     for k, v in json_x.items():
         dir_index = int(k.split('_')[0])
+
         if not green_blue:
+            # 绿膜数据处理
             if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-                r_, g_, b_ = [float(a)/255 for a in json_x[k]]
-                X.append([r_, g_, b_])
-                v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                Y.append(v_[index])
-                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
+                # 是否 gamma 矫正
+                if not gammaed:
+                    X.append([r_, g_, b_])
+                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                    Y.append(v_[index])
+                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                else:
+                    org_rgb.append([r_, g_, b_])
+                    gamma_r_ = gamma(r_)
+                    gamma_g_ = gamma(g_)
+                    gamma_b_ = gamma(b_)
+                    gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
+                    X.append([gamma_r_, gamma_g_, gamma_b_])
+                    X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                    Y.append(v_[index])
+                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
+
         else:
+            # 蓝膜数据处理
             if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-                # if index == 2:
-                #     # 对b值进行gamma矫正
-                #     gamma_b_ = gamma(b_)
-                # else:
-                #     gamma_b_ = b_
-                # org_b_gammaes_b.append([b_, gamma_b_])
-                # X.append([r_, g_, gamma_b_])
-
-                org_rgb.append([r_, g_, b_])
-                # rgb均进行gamma矫正
-                gamma_r_ = gamma(r_)
-                gamma_g_ = gamma(g_)
-                gamma_b_ = gamma(b_)
-                gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
-                X.append([gamma_r_, gamma_g_, gamma_b_])
-                X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-                v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                Y.append(v_[index])
-                rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
+                # 是否 gamma 矫正
+                if not gammaed:
+                    X.append([r_, g_, b_])
+                    X_dict[k] = [r_, g_, b_]
+                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                    Y.append(v_[index])
+                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                else:
+                    # if index == 2:
+                    #     # 只对b值进行gamma矫正
+                    #     gamma_b_ = gamma(b_)
+                    # else:
+                    #     gamma_b_ = b_
+                    # org_b_gammaes_b.append([b_, gamma_b_])
+                    # X.append([r_, g_, gamma_b_])
+                    org_rgb.append([r_, g_, b_])
+                    # rgb均进行gamma矫正
+                    gamma_r_ = gamma(r_)
+                    gamma_g_ = gamma(g_)
+                    gamma_b_ = gamma(b_)
+                    gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
+                    X.append([gamma_r_, gamma_g_, gamma_b_])
+                    X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                    Y.append(v_[index])
+                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
     X = np.array(X)
     Y = np.array(Y)
@@ -290,7 +305,7 @@ def load_data(json_x, json_y, index, green_blue):
     print(len(X_dict))
 
     # show_b_gamma(org_b_gammaes_b)
-    # show_rgb_gamma(org_rgb, gammed_rgb)
+    # show_rgb_gamma(org_rgb, gammed_rgb, green_blue)
 
     return X, Y, rgb_ImgName, X_dict
 
@@ -330,9 +345,8 @@ def split_blueand_green():
 
 
 
-from util import cnames
-colors = list(cnames.keys())
-def check_lab_res(js_x, js_y, ff, X_dict):
+
+def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
 
     aa = [i for i in range(3)]
 
@@ -361,9 +375,11 @@ def check_lab_res(js_x, js_y, ff, X_dict):
 
         if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
             c += 1
-
+        else:
+            print("data: {}, diff l: {}, diff a: {}, diff b: {}".format(k, abs(pre_l-real_l), abs(pre_a-real_a), abs(pre_b-real_b)))
         # green_all_dict[''.join(a+',' for a in js_x[k])] = 1
-        blue_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
+        if green_blue:
+            blue_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
 
         # else:
         #     print("dir_name: {}".format(k))
@@ -484,16 +500,16 @@ def check_lab_res(js_x, js_y, ff, X_dict):
     # plt.grid()
     # plt.show()
 
-    plt.title("gamma_ed_rgb diff ok_ng case")
-    for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
-        gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
-        if diff_a[0] > 0.5:
-            plt.plot(aa, gammed_rgb, color='black', label='diff ng')
-        else:
-            plt.plot(aa, gammed_rgb, color='pink')
-    plt.legend()
-    plt.show()
-
+    if green_blue:
+        plt.title("gamma_ed_rgb diff ok_ng case")
+        for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
+            gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
+            if diff_a[0] > 0.5:
+                plt.plot(aa, gammed_rgb, color='black', label='diff ng')
+            else:
+                plt.plot(aa, gammed_rgb, color='pink')
+        plt.legend()
+        plt.show()
 
 
 def overfiting(X, Y, index, green_blue):
@@ -504,7 +520,7 @@ def overfiting(X, Y, index, green_blue):
 
     cvresult1 = xgb.cv(param1, dfull, num_round)
 
-    fig, ax = plt.subplots(1, figsize=(6, 6))
+    fig, ax = plt.subplots(1, figsize=(15,8))
     ax.set_ylim(top=5)
     ax.grid()
     ax.plot(range(1, 201), cvresult1.iloc[:, 0], c="red", label="train,original")
@@ -522,7 +538,7 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 1
+    green_blue = 0
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
@@ -530,15 +546,15 @@ if __name__ == "__main__":
     X_dict = dict()
     for i in range(3):
         print("for {} value".format(flags[i]))
-        X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue)
+        X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        hyperparameter_searching(X, Y, i, green_blue)
-        overfiting(X, Y, i, green_blue)
+        # hyperparameter_searching(X, Y, i, green_blue)
+        # overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
-    check_lab_res(js_x, js_y, ff, X_dict)
+    check_lab_res(green_blue, js_x, js_y, ff, X_dict)
 
 

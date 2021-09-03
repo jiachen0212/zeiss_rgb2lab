@@ -86,26 +86,6 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName):
     #         print(key_, '=====')
 
 
-    # # test
-    # dfull = xgb.DMatrix(X, Y)
-    # param1 = {'silent': True
-    #     , 'obj': 'reg:linear'
-    #     , "subsample": 1
-    #     , "max_depth": 6
-    #     , "eta": 0.3
-    #     , "gamma": 0
-    #     , "lambda": 1
-    #     , "alpha": 0
-    #     , "colsample_bytree": 1
-    #     , "colsample_bylevel": 1
-    #     , "colsample_bynode": 1
-    #     , "nfold": 5}
-    # num_round = 200
-    #
-    # cvresult1 = xgb.cv(param1, dfull, num_round)
-    # print(cvresult1, '-=-=-=-=')
-
-
     # hyperparameter_searching beat parameters
     parameters = json.load(open(r'./rgb2lab_parameter_{}_{}.json'.format(index, green_blue), 'r'))
 
@@ -157,10 +137,10 @@ def hyperparameter_searching(X, y, index, green_blue):
         xgb_model = xgb.XGBRegressor()
         params = {
             "colsample_bytree": uniform(0.9, 0.1),
-            "gamma": uniform(0, 0.),  # gamma越小, 模型越复杂..
+            "gamma": uniform(0, 0.5),  # gamma越小, 模型越复杂..
             "learning_rate": uniform(0.01, 0.5),  # default 0.1
             "max_depth": randint(2, 8),  # default 3
-            "n_estimators": randint(100, 150),  # default 100
+            "n_estimators": randint(100, 130),  # default 100
             "subsample": uniform(0.6, 0.4)
 
         }
@@ -168,12 +148,11 @@ def hyperparameter_searching(X, y, index, green_blue):
     else:
         xgb_model = xgb.XGBRegressor()
         params = {
-            "colsample_bytree": uniform(0.7, 0.3),
-            "eta": 0.3,
+            "colsample_bytree": uniform(0.9, 0.1),
             "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
-            "learning_rate": uniform(0.01, 0.1),  # default 0.1
-            "max_depth": randint(2, 5),  # default 3
-            "n_estimators": randint(60, 80),  # default 100
+            "learning_rate": uniform(0.01, 0.5),  # default 0.1
+            "max_depth": randint(2, 8),  # default 3
+            "n_estimators": randint(80, 120),  # default 100
             "subsample": uniform(0.6, 0.4)
         }
 
@@ -185,33 +164,16 @@ def hyperparameter_searching(X, y, index, green_blue):
     report_best_scores(search.cv_results_, index, green_blue, 5)
 
 
-
-def lab2xyz(l,a,b):
-    fy = (l+16.0) / 116.0
-    fx = a / 500.0 + fy
-    fz = fy - b / 200.0
-    if np.power(fy, 3) > 0.008856:
-        y = np.power(fy, 3)
+def gamma(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/1.055, 2.4)
     else:
-        y = (fy - 16 / 116.0) / 7.787
+        a /= 12.92
 
-    if np.power(fx, 3) > 0.008856:
-        x = np.power(fx, 3)
-    else:
-        x = (fx - 16 / 116.0) / 7.787
-
-    if np.power(fz, 3) > 0.008856:
-        z = np.power(fz, 3)
-    else:
-        z = (fz - 16 / 116.0) / 7.787
-    x *= 94.81211415
-    y *= 100
-    z *= 107.3369399
-
-    return [x,y,z]
+    return a
 
 
-def load_data(json_x, json_y, index, green_blue):
+def load_data(json_x, json_y, index, green_blue, gammaed=False):
     rgb_ImgName = dict()
     X , Y = [], []
     for k, v in json_x.items():
@@ -219,15 +181,31 @@ def load_data(json_x, json_y, index, green_blue):
         if not green_blue:
             if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a)/255 for a in json_x[k]]
-                X.append([r_, g_, b_])
-                Y.append(json_y[k][index])
-                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                if not gammaed:
+                    X.append([r_, g_, b_])
+                    Y.append(json_y[k][index])
+                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                else:
+                    gamma_r_ = gamma(r_)
+                    gamma_g_ = gamma(g_)
+                    gamma_b_ = gamma(b_)
+                    X.append([gamma_r_, gamma_g_, gamma_b_])
+                    Y.append(json_y[k][index])
+                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
         else:
             if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-                X.append([r_, g_, b_])
-                Y.append(json_y[k][index])
-                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                if not gammaed:
+                    X.append([r_, g_, b_])
+                    Y.append(json_y[k][index])
+                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+                else:
+                    gamma_r_ = gamma(r_)
+                    gamma_g_ = gamma(g_)
+                    gamma_b_ = gamma(b_)
+                    X.append([gamma_r_, gamma_g_, gamma_b_])
+                    Y.append(json_y[k][index])
+                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
     X = np.array(X)
     Y = np.array(Y)
@@ -235,29 +213,6 @@ def load_data(json_x, json_y, index, green_blue):
     print(len(rgb_ImgName))
 
     return X, Y, rgb_ImgName
-
-
-def xyz2lab(x, y, z):
-    x /= 94.81211415
-    y /= 100
-    z /= 107.3369399
-    if y > 0.008856:
-        fy = np.power(y, 1/3)
-    else:
-        fy = 7.787 * y + 16 / 116.0
-    if x > 0.008856:
-        fx = np.power(x, 1/3)
-    else:
-        fx = 7.787 * x + 16 / 116.0
-    if z > 0.008856:
-        fz = np.power(z, 1/3)
-    else:
-        fz = 7.787 * z + 16 / 116.0
-    l = 116 * fy - 16
-    a = 500 * (fx - fy)
-    b = 200 * (fy - fz)
-    return [l, a, b]
-
 
 
 def split_blueand_green():
@@ -269,57 +224,6 @@ def split_blueand_green():
         if v[1] > v[2]:
             if dir_index > 21:
                 print(k, '==')
-
-
-
-
-def check_lab_res(js_x, js_y, ff):
-    x_pred = json.load(open(r'./xyz_0.json', 'r'))
-    y_pred = json.load(open(r'./xyz_1.json', 'r'))
-    z_pred = json.load(open(r'./xyz_2.json', 'r'))
-    ks = list(x_pred.keys())
-
-    c = 0
-    bad_l, bad_a, bad_b = 0, 0, 0
-    for k in ks:
-        real_l, real_a, real_b = js_y[k]
-        pre_x, pre_y, pre_z = float(x_pred[k]), float(y_pred[k]), float(z_pred[k])
-        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
-        real_x, real_y, real_z = lab2xyz(real_l, real_a, real_b)
-
-        if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
-            c += 1
-
-        else:
-            print("dir_name: {}".format(k))
-            print("rgb: {}".format(js_x[k]))
-            print("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]))
-            print("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a), abs(pre_b - real_b)))
-            print("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y), abs(pre_z - real_z)))
-            print('\n')
-
-            ff.write("dir_name: {}".format(k) + '\n')
-            ff.write("rgb: {}".format(js_x[k]) + '\n')
-            ff.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
-            ff.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
-                                                             abs(pre_b - real_b)) + '\n')
-            ff.write("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y),
-                                                             abs(pre_z - real_z)) + '\n')
-            ff.write('\n')
-
-        if abs(pre_l-real_l) > 0.5:
-            bad_l += 1
-        if abs(pre_a-real_a) > 0.5:
-            bad_a += 1
-        if abs(pre_b-real_b) > 0.5:
-            bad_b += 1
-
-
-    print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)))
-    ff.write('\n')
-    ff.write("bad_L: {}, bad_A:{}, bad_B:{}".format(bad_l, bad_a, bad_b) + '\n')
-    ff.write("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)) + '\n')
-
 
 
 def overfiting(X, Y, index, green_blue):
@@ -337,6 +241,7 @@ def overfiting(X, Y, index, green_blue):
     ax.plot(range(1, 201), cvresult1.iloc[:, 2], c="orange", label="test,original")
     ax.legend(fontsize="xx-large")
     plt.show()
+
 
 
 def check_lab_res(js_x, js_y):
@@ -375,19 +280,19 @@ if __name__ == "__main__":
     js_y = json.load(open(r'./all_data_lab.json', 'r'))
 
     # green: 0, blue: 1
-    green_blue = 0
+    green_blue = 1
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
     ff = open(r'./bad_{}.txt'.format(txts[green_blue]), 'w')
     for i in range(3):
         print("for {} value".format(flags[i]))
-        X, Y, rgb_ImgName = load_data(js_x, js_y, i, green_blue)
+        X, Y, rgb_ImgName = load_data(js_x, js_y, i, green_blue, gammaed=True)
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
         hyperparameter_searching(X, Y, i, green_blue)
-        # overfiting(X, Y, i, green_blue)
+        overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
