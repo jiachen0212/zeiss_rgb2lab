@@ -245,6 +245,7 @@ def show_b_gamma(org_b_gammaes_b):
 
 
 def load_data(json_x, json_y, index, green_blue):
+    X_dict = dict()
     org_b_gammaes_b = []
     org_rgb = []
     gammed_rgb = []
@@ -277,6 +278,7 @@ def load_data(json_x, json_y, index, green_blue):
                 gamma_b_ = gamma(b_)
                 gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
                 X.append([gamma_r_, gamma_g_, gamma_b_])
+                X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
                 v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
                 Y.append(v_[index])
                 rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
@@ -285,11 +287,12 @@ def load_data(json_x, json_y, index, green_blue):
     Y = np.array(Y)
     print(X.shape)
     print(len(rgb_ImgName))
+    print(len(X_dict))
 
     # show_b_gamma(org_b_gammaes_b)
     # show_rgb_gamma(org_rgb, gammed_rgb)
 
-    return X, Y, rgb_ImgName
+    return X, Y, rgb_ImgName, X_dict
 
 
 def xyz2lab(x, y, z):
@@ -329,14 +332,15 @@ def split_blueand_green():
 
 from util import cnames
 colors = list(cnames.keys())
-def check_lab_res(js_x, js_y, ff):
+def check_lab_res(js_x, js_y, ff, X_dict):
+
     aa = [i for i in range(3)]
 
     f_bad_l = open(r'./bad_l.txt', 'w')
     f_bad_a = open(r'./bad_a.txt', 'w')
     f_bad_b = open(r'./bad_b.txt', 'w')
     green_all_dict = dict()
-    blue_all_dict = dict()
+    blue_bad_a_dict = dict()
     bad_a_rgb = []
     bad_a_dict = dict()
     bad_b_dict = dict()
@@ -358,15 +362,16 @@ def check_lab_res(js_x, js_y, ff):
         if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
             c += 1
 
-        green_all_dict[''.join(a+',' for a in js_x[k])] = 1
+        # green_all_dict[''.join(a+',' for a in js_x[k])] = 1
+        blue_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
+
         # else:
         #     print("dir_name: {}".format(k))
         #     print("rgb: {}".format(js_x[k]))
         #     print("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]))
         #     print("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a), abs(pre_b - real_b)))
-        #     print("diff_x: {}, diff_y: {}, diff_z:{}".format(abs(pre_x - real_x), abs(pre_y - real_y), abs(pre_z - real_z)))
         #     print('\n')
-        #
+
         #     ff.write("dir_name: {}".format(k) + '\n')
         #     ff.write("rgb: {}".format(js_x[k]) + '\n')
         #     ff.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
@@ -479,6 +484,16 @@ def check_lab_res(js_x, js_y, ff):
     # plt.grid()
     # plt.show()
 
+    plt.title("gamma_ed_rgb diff ok_ng case")
+    for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
+        gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
+        if diff_a[0] > 0.5:
+            plt.plot(aa, gammed_rgb, color='black', label='diff ng')
+        else:
+            plt.plot(aa, gammed_rgb, color='pink')
+    plt.legend()
+    plt.show()
+
 
 
 def overfiting(X, Y, index, green_blue):
@@ -489,7 +504,7 @@ def overfiting(X, Y, index, green_blue):
 
     cvresult1 = xgb.cv(param1, dfull, num_round)
 
-    fig, ax = plt.subplots(1, figsize=(6,6))
+    fig, ax = plt.subplots(1, figsize=(6, 6))
     ax.set_ylim(top=5)
     ax.grid()
     ax.plot(range(1, 201), cvresult1.iloc[:, 0], c="red", label="train,original")
@@ -512,17 +527,18 @@ if __name__ == "__main__":
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
     ff = open(r'./bad_{}.txt'.format(txts[green_blue]), 'w')
+    X_dict = dict()
     for i in range(3):
         print("for {} value".format(flags[i]))
-        X, Y, rgb_ImgName = load_data(js_x, js_y, i, green_blue)
+        X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue)
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        # hyperparameter_searching(X, Y, i, green_blue)
-        # overfiting(X, Y, i, green_blue)
+        hyperparameter_searching(X, Y, i, green_blue)
+        overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
-    check_lab_res(js_x, js_y, ff)
+    check_lab_res(js_x, js_y, ff, X_dict)
 
 
