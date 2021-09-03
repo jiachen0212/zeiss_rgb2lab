@@ -74,53 +74,33 @@ def prepare_data():
 
 
 def cross_val(X, Y, index, green_blue, rgb_ImgName):
-    xyz_res = dict()
-    single_xyz_res = r'./xyz_{}.json'.format(index)
+    single_lab_res = dict()
 
     X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=88)
 
     # 查看train中异常样本数量
-    for ii, item in enumerate(X_train):
-        value = ''.join(str(a) for a in X_train[ii])
-        key_ = rgb_ImgName[value]
-        if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-            print(key_, '=====')
+    # for ii, item in enumerate(X_train):
+    #     value = ''.join(str(a) for a in X_train[ii])
+    #     key_ = rgb_ImgName[value]
+    #     if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
+    #         print(key_, '=====')
 
 
     # hyperparameter_searching beat parameters
-    parameters = json.load(open(r'./parameter_{}_{}.json'.format(index, green_blue), 'r'))
+    parameters = json.load(open(r'./rgb2lab_parameter_{}_{}.json'.format(index, green_blue), 'r'))
 
     xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
-    xgb_model.fit(X, Y)
+    xgb_model.fit(X_train, y_train)
 
-    # y_pred = xgb_model.predict(X_test)
-    # for index, item in enumerate(y_pred):
-    #     value = ''.join(str(int(a)) for a in X_test[index]) + str(y_test[index])
-    #     info = rgb_ImgName[value]
-    #     xyz_res[info] = str(item)
-
-    # test all data
     y_pred = xgb_model.predict(X)
     for ii, item in enumerate(y_pred):
         value = ''.join(str(a) for a in X[ii])
         info = rgb_ImgName[value]
-        xyz_res[info] = str(item)
+        single_lab_res[info] = str(item)
 
-    data = json.dumps(xyz_res)
-    with open(single_xyz_res, 'w') as js_file:
+    data = json.dumps(single_lab_res)
+    with open(r"./single_lab_{}.json".format(index), 'w') as js_file:
         js_file.write(data)
-
-    # c, d = 0, 0
-    # for index, item in enumerate(y_pred):
-    #     c += 1
-    #     if abs(y_test[index] - y_pred[index]) <= 0.5:
-    #         d += 1
-    #     else:
-    #         value = ''.join(str(int(a)) for a in X_test[index]) + str(y_test[index])
-    #         info = str(rgb_ImgName[value]) + '\tdiff: ' + str(abs(y_test[index] - y_pred[index]))
-    #         print(X_test[index], y_test[index], info)
-    #         ff.write(info + '\n')
-    # print("test all size: {}, ok size: {}, percent: {}".format(c, d, d/c))
 
 
 def report_best_scores(results, index, green_blue, n_top=3):
@@ -137,44 +117,34 @@ def report_best_scores(results, index, green_blue, n_top=3):
 
     # 超参落盘
     data = json.dumps(parameter)
-    with open(r'./parameter_{}_{}.json'.format(index, green_blue), 'w') as js_file:
+    with open(r'./rgb2lab_parameter_{}_{}.json'.format(index, green_blue), 'w') as js_file:
         js_file.write(data)
 
 
 
 def hyperparameter_searching(X, y, index, green_blue):
 
+    if not green_blue:
+        xgb_model = xgb.XGBRegressor()
+        params = {
+            "colsample_bytree": uniform(0.9, 0.1),
+            "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
+            "learning_rate": uniform(0.01, 0.5),  # default 0.1
+            "max_depth": randint(2, 6),  # default 3
+            "n_estimators": randint(80, 120),  # default 100
+            "subsample": uniform(0.6, 0.4)
+        }
 
-    # xgb_model = xgb.XGBRegressor()
-    # params = {
-    #     "colsample_bytree": uniform(0.9, 0.1),
-    #     "gamma": uniform(0, 0.),
-    #     "learning_rate": uniform(0.03, 0.3),  # default 0.1
-    #     "max_depth": randint(2, 6),  # default 3
-    #     "n_estimators": randint(100, 150),  # default 100
-    #     "subsample": uniform(0.6, 0.4)
-    # }
-
-
-    # xgb_model = xgb.XGBRegressor()
-    # params = {
-    #     "colsample_bytree": uniform(0.9, 0.1),
-    #     "gamma": uniform(0, 0.),   # gamma越小, 模型越复杂..
-    #     "learning_rate": uniform(0.01, 0.5),  # default 0.1
-    #     "max_depth": randint(2, 8),  # default 3
-    #     "n_estimators": randint(100, 150),  # default 100
-    #     "subsample": uniform(0.6, 0.4)
-    # }
-
-    xgb_model = xgb.XGBRegressor()
-    params = {
-        "colsample_bytree": uniform(0.9, 0.1),
-        "gamma": uniform(0, 0.3),   # gamma越小, 模型越复杂..
-        "learning_rate": uniform(0.01, 0.5),  # default 0.1
-        "max_depth": randint(2, 8),  # default 3
-        "n_estimators": randint(100, 120),  # default 100
-        "subsample": uniform(0.6, 0.4)
-    }
+    else:
+        xgb_model = xgb.XGBRegressor()
+        params = {
+            "colsample_bytree": uniform(0.9, 0.1),
+            "gamma": uniform(0, 0.5),   # gamma越小, 模型越复杂..
+            "learning_rate": uniform(0.01, 0.3),  # default 0.1
+            "max_depth": randint(2, 6),  # default 3
+            "n_estimators": randint(80, 120),  # default 100
+            "subsample": uniform(0.6, 0.4)
+        }
 
     search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
                                 n_jobs=8, return_train_score=True)
@@ -219,15 +189,13 @@ def load_data(json_x, json_y, index, green_blue):
             if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a)/255 for a in json_x[k]]
                 X.append([r_, g_, b_])
-                v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                Y.append(v_[index])
+                Y.append(json_y[k][index])
                 rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
         else:
             if dir_index > 21 and k not in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
                 r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
                 X.append([r_, g_, b_])
-                v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                Y.append(v_[index])
+                Y.append(json_y[k][index])
                 rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
 
     X = np.array(X)
@@ -340,9 +308,36 @@ def overfiting(X, Y, index, green_blue):
     plt.show()
 
 
+def check_lab_res(js_x, js_y):
+    l_pred = json.load(open(r"./single_lab_0.json", 'r'))
+    a_pred = json.load(open(r"./single_lab_1.json", 'r'))
+    b_pred = json.load(open(r"./single_lab_2.json", 'r'))
+    ks = list(l_pred.keys())
+
+    c = 0
+    bad_l, bad_a, bad_b = 0, 0, 0
+    for k in ks:
+        real_l, real_a, real_b = js_y[k]
+        pre_l, pre_a, pre_b = float(l_pred[k]), float(a_pred[k]), float(b_pred[k])
+        if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
+            c += 1
+        else:
+            print("img_name: {}, diff_l: {}, diff_a: {}, diff_b: {}".format(k, abs(pre_l-real_l), abs(pre_a-real_a), abs(pre_b-real_b)))
+
+        if abs(pre_l-real_l) > 0.5:
+            bad_l += 1
+        if abs(pre_a-real_a) > 0.5:
+            bad_a += 1
+        if abs(pre_b-real_b) > 0.5:
+            bad_b += 1
+
+    print("ok size: {}".format(c))
+    print("bad l:{}, bad a: {}, bas b: {}".format(bad_l, bad_a, bad_b))
+
+
 if __name__ == "__main__":
 
-    # merge data1 and 2
+    # merge data1 and data2
     prepare_data()
 
     js_x = json.load(open(r'./all_data_rgb3.json', 'r'))
@@ -360,11 +355,11 @@ if __name__ == "__main__":
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        # hyperparameter_searching(X, Y, i, green_blue)
+        hyperparameter_searching(X, Y, i, green_blue)
         overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
     # compare result
-    check_lab_res(js_x, js_y, ff)
+    check_lab_res(js_x, js_y)
 
 

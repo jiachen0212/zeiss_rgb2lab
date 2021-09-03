@@ -54,7 +54,8 @@ def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
     color = img[mask != 0].mean(axis=0)
-    return color.astype(np.uint8)
+    # return color.astype(np.uint8)
+    return color
 
 
 def is_ok(color, color_thresholds):
