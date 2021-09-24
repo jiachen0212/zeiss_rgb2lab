@@ -111,7 +111,8 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
 
 def main(single_dir_col, dir_index, dir_path, base_index_value, isblue):
     # 等待 mo_yu 哥针对每个文件夹定制的 config.json
-    config_file = os.path.join(dir_path, r'D:\work\project\卡尔蔡司AR镀膜\poc\data_0924\1\config_green.json')
+    config_file = r'D:\work\project\卡尔蔡司AR镀膜\poc\data_0924\1\config_blue.json'
+    # config_file = os.path.join(dir_path, r'config_blue.json')
     with open(config_file) as f:
         conf = json.load(f)
         color_lower = tuple(conf.get("color_lower"))
@@ -137,9 +138,10 @@ def main(single_dir_col, dir_index, dir_path, base_index_value, isblue):
                 if color[2] > color[1]:
                     print("color: {}\tgreen data, but blue > green..\t{}".format(color, im_path))
         except:
-            color = [33.66983938, 113.96252231, 199.80785247]
-            single_dir_col["{}_{}".format(dir_index + base_index_value, im_name)] = [str(a) for a in color]
-
+            print(dir_path)
+            continue
+            # color = [33.66983938, 113.96252231, 199.80785247]
+            # single_dir_col["{}_{}".format(dir_index + base_index_value, im_name)] = [str(a) for a in color]
 
 # def lab2xyz(l,a,b):
 #     fy = (l+16.0) / 116.0
@@ -172,7 +174,7 @@ def generate_x(blue_dir, base_index_value, isblue):
         dir_path = os.path.join(base_dir, dir_name)
         main(all_col3, i, dir_path, base_index_value, isblue)
     data = json.dumps(all_col3)
-    print(all_col3.keys())
+    print(len(list(all_col3.keys())))
     with open('./3float_rgb_0924.json', 'w') as js_file:
         js_file.write(data)
 
@@ -198,7 +200,7 @@ def generate_y(blue_dir, blue_number, base_index_value):
             # print(lab2xyz(l, a, b))
             xyz_dict["{}_{}".format(i + base_index_value, j)] = [x, y, z]
             # print(x, y, z)
-    print(lab_dict.keys())
+    print(len(list(lab_dict.keys())))
     data1 = json.dumps(lab_dict)
     with open('./lab_value_0924.json', 'w') as js_file:
         js_file.write(data1)
@@ -222,7 +224,7 @@ if __name__ == '__main__':
     mixup_dir = [r'2', r'4', r'6']
     mixup_number = [2, 4, 6]
 
-    isblue = 0
+    isblue = 1
 
     # isblue: 0green 1blue
     if isblue:
@@ -231,6 +233,6 @@ if __name__ == '__main__':
         base_index_value = 100
 
     # step1. for float rgb value
-    generate_x(green_dir, base_index_value, isblue)
+    generate_x(blue_dir, base_index_value, isblue)
     # # step2. for lab value
-    # generate_y(green_dir, green_number, base_index_value)
+    generate_y(blue_dir, blue_number, base_index_value)
