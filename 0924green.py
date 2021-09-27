@@ -1,7 +1,7 @@
 # coding=utf-8
 '''
-rgb2xyz, 拆分成3个model, 分别完成: rgb2x rgb2y rgb2z
-xgboost
+sao操作: 0812+0924所有的绿膜数据做参数搜索, 得到params. 然后仅用0924的绿膜数据+params训xgboost:  73/76 = 96+%
+
 
 '''
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
@@ -43,6 +43,14 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName):
     single_xyz_res = r'./xyz_{}.json'.format(index)
 
     X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=88)
+
+    # 查看train中异常样本数量
+    for ii, item in enumerate(X_train):
+        value = ''.join(str(a) for a in X_train[ii])
+        key_ = rgb_ImgName[value]
+        if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
+            print(key_, '=====')
+
 
     # hyperparameter_searching beat parameters
     parameters = json.load(open(r'./parameter_{}_{}.json'.format(index, green_blue), 'r'))
@@ -193,81 +201,38 @@ def show_b_gamma(org):
 
 def load_data(json_x, json_y, index, green_blue, gammaed=False):
     X_dict = dict()
-    # org_b_gammaes_b = []
     org_rgb = []
     gammed_rgb = []
     rgb_ImgName = dict()
     X , Y = [], []
-    bad_g = 0
     for k, v in json_x.items():
-        dir_index = int(k.split('_')[0])
-
-        if not green_blue:
-            # 绿膜数据处理
-            if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-                r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-                # 是否 gamma 矫正
-                if not gammaed:
-                    X.append([r_, g_, b_])
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-                else:
-                    org_rgb.append([r_, g_, b_])
-                    gamma_r_ = gamma(r_)
-                    gamma_g_ = gamma(g_)
-                    gamma_b_ = gamma(b_)
-                    gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
-                    X.append([gamma_r_, gamma_g_, gamma_b_])
-                    X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
-
+        # 绿膜数据处理
+        r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
+        # 是否 gamma 矫正
+        if not gammaed:
+            X.append([r_, g_, b_])
+            v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+            X_dict[k] = [r_, g_, b_]
         else:
-            r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-            if gammaed:
-                # print("rgb: {}".format(json_x[k]))
-                org_rgb.append([r_, g_, b_])
-                gamma_r_ = gamma(r_)
-                gamma_g_ = gamma(g_)
-                gamma_b_ = gamma(b_)
-                # print("gammed: {}".format([gamma_r_, gamma_g_, gamma_b_]))
-                # if gamma_g_ > gamma_b_:
-                #     print(k)
-                if gamma_g_ < 0.4:
-                    # if gamma_b_ <= 0.5:
-                    if gamma_b_ > 0.5:
-                        X.append([gamma_r_, gamma_g_, gamma_b_])
-                        X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-                        v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                        Y.append(v_[index])
-                        rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
-                else:
-                    bad_g += 1
-                    print(k)
-
-            else:
-                # 只对r, g gamma
-                g_ = gamma(g_)
-                r_ = gamma(r_)
-                if g_ < 0.4:
-                    X.append([r_, g_, b_])
-                    X_dict[k] = [r_, g_, b_]
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-                    # 69/172 不大行...
+            org_rgb.append([r_, g_, b_])
+            gamma_r_ = gamma(r_)
+            # gamma_g_ = g_
+            gamma_g_ = gamma(g_)
+            gamma_b_ = gamma(b_)
+            gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
+            X.append([gamma_r_, gamma_g_, gamma_b_])
+            X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+            v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
     X = np.array(X)
     Y = np.array(Y)
-    print("green value 异常的值: {}".format(bad_g))
     print(X.shape)
     print(len(rgb_ImgName))
     print(len(X_dict))
-
-
-    # show_rgb_gamma(org_rgb, gammed_rgb, green_blue)
 
     return X, Y, rgb_ImgName, X_dict
 
@@ -315,15 +280,17 @@ def imread(path):
 
 
 def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
-    aa = [i for i in range(3)]
 
+    aa = [i for i in range(3)]
     blue_bad_a_dict = dict()
+    green_bad_a_dict = dict()
+
     x_pred = json.load(open(r'./xyz_0.json', 'r'))
     y_pred = json.load(open(r'./xyz_1.json', 'r'))
     z_pred = json.load(open(r'./xyz_2.json', 'r'))
 
     c = 0
-    blue_diff = open(r'./blue_diff.txt', 'w')
+    blue_diff = open(r'./green_diff.txt', 'w')
     for k, v in x_pred.items():
         real_l, real_a, real_b = js_y[k]
         pre_x, pre_y, pre_z = float(x_pred[k]), float(y_pred[k]), float(z_pred[k])
@@ -338,53 +305,27 @@ def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
 
         if green_blue:
             blue_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
+        else:
+            green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
 
+    print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(x_pred)))
 
     bad_a = []
     ok_a = []
-    tmp_save_dir = r'C:\Users\15974\Desktop\ycy'
-    import cv2
-    import os
-    if green_blue:
-        diff_b_g = []
+    if not green_blue:
         plt.title("gamma_ed_rgb diff ok_ng case")
-        for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
+        for gamma_ed_rgb, diff_a in green_bad_a_dict.items():
             gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
-            im_name = diff_a[1].split('_')[1] + '.bmp'
-            img_path = os.path.join(r'D:\work\project\卡尔蔡司AR镀膜\poc\20210924\20210924',
-                                    str(int(diff_a[1].split('_')[0]) - 50), im_name)
-            # img = imread(img_path)
-
             if diff_a[0] > 0.5:
-                # print("bad a color: {}".format(js_x[diff_a[1]]))
                 bad_a.append(diff_a[1])
-                # tmp_path = os.path.join(tmp_save_dir, 'bad', str(int(diff_a[1].split('_')[0])-50))
-                # if not os.path.exists(tmp_path):
-                #     os.mkdir(tmp_path)
-                # cv2.imwrite(os.path.join(tmp_path, im_name), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-
-                # print(js_x[diff_a[1]][2] - js_x[diff_a[1]][1])
-                # if js_x[diff_a[1]][2] - js_x[diff_a[1]][1] < 100:
-                #     plt.plot(aa, gammed_rgb, color='black')
-                # else:
-                #     plt.plot(aa, gammed_rgb, color='green')
-                plt.plot(aa, gammed_rgb, color='black')
+                plt.plot(aa, gammed_rgb, color='black', label='diff ng')
             else:
-                # print("ok a color: {}".format(js_x[diff_a[1]]))
-                # diff_b_g.append(js_x[diff_a[1]][2] - js_x[diff_a[1]][1])
-                # tmp_path = os.path.join(tmp_save_dir, 'ok', str(int(diff_a[1].split('_')[0]) - 50))
-                # if not os.path.exists(tmp_path):
-                #     os.mkdir(tmp_path)
-                # cv2.imwrite(os.path.join(tmp_path, im_name), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
                 plt.plot(aa, gammed_rgb, color='pink')
                 ok_a.append(diff_a[1])
-        # ok样本, b-g的值没有显著的范围特点..
-        # print(min(diff_b_g), max(diff_b_g))
+        plt.legend()
         plt.show()
-
-    # print("bad a: {}".format(bad_a))
-    # print("ok a: {}".format(ok_a))
-    print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(x_pred)))
+    print("bad a: {}".format(bad_a))
+    print("ok a: {}".format(ok_a))
 
 def overfiting(X, Y, index, green_blue):
     dfull = xgb.DMatrix(X, Y)
@@ -408,17 +349,14 @@ if __name__ == "__main__":
     # merge data1 and 2
     prepare_data()
 
-    # js_x = json.load(open(r'./all_data_rgb3.json', 'r'))   # rgb float value   229 numbers
-    # js_y = json.load(open(r'./all_data_lab.json', 'r'))    # lab value
+    # js_x = json.load(open(r'./all_green_color.json', 'r'))
+    # js_y = json.load(open(r'./all_green_lab.json', 'r'))
+    js_x = json.load(open(r'./green_color.json', 'r'))
+    js_y = json.load(open(r'./green_lab.json', 'r'))
+    print(len(js_y), len(js_x))
 
-    # js_x = json.load(open(r'./blue_color.json', 'r'))
-    # js_y = json.load(open(r'./blue_lab.json', 'r'))
-    js_x = json.load(open(r'./all_blue_color.json', 'r'))
-    js_y = json.load(open(r'./all_blue_lab.json', 'r'))
-
-    print("all blue data: {}".format(len(js_y)))
     # green: 0, blue: 1
-    green_blue = 1
+    green_blue = 0
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
@@ -430,7 +368,7 @@ if __name__ == "__main__":
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        hyperparameter_searching(X, Y, i, green_blue)
+        # hyperparameter_searching(X, Y, i, green_blue)
         overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 

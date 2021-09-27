@@ -1,25 +1,23 @@
 # coding=utf-8
 '''
-rgb2xyz, 拆分成3个model, 分别完成: rgb2x rgb2y rgb2z
-xgboost
+sao操作: 0812+0924所有的蓝膜数据做参数搜索, 得到params. 然后仅用0924的蓝膜数据+params训xgboost
+
+不ok...
 
 '''
-from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
+from sklearn.model_selection import RandomizedSearchCV
 import xgboost as xgb
 import json
 import numpy as np
 from scipy.stats import uniform, randint
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold, cross_val_score as CVS, train_test_split as TTS
+from sklearn.model_selection import train_test_split as TTS
 
 def prepare_data():
     js1_all = dict()
     js2_all = dict()
     js1 = json.load(open(r'./all_col3.json', 'r'))
     js1_1 = json.load(open(r'./all_col3_0821.json', 'r'))
-    # for k, v in js1.items():
-    #     if len(v) == 6:
-    #         print(k)
 
     js2 = json.load(open(r'./0812lab_value1.json', 'r'))
     js2_1 = json.load(open(r'./all_lab_value.json', 'r'))
@@ -193,71 +191,34 @@ def show_b_gamma(org):
 
 def load_data(json_x, json_y, index, green_blue, gammaed=False):
     X_dict = dict()
-    # org_b_gammaes_b = []
     org_rgb = []
     gammed_rgb = []
     rgb_ImgName = dict()
     X , Y = [], []
     bad_g = 0
     for k, v in json_x.items():
-        dir_index = int(k.split('_')[0])
-
-        if not green_blue:
-            # 绿膜数据处理
-            if dir_index <= 21 or k in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-                r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-                # 是否 gamma 矫正
-                if not gammaed:
-                    X.append([r_, g_, b_])
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-                else:
-                    org_rgb.append([r_, g_, b_])
-                    gamma_r_ = gamma(r_)
-                    gamma_g_ = gamma(g_)
-                    gamma_b_ = gamma(b_)
-                    gammed_rgb.append([gamma_r_, gamma_g_, gamma_b_])
-                    X.append([gamma_r_, gamma_g_, gamma_b_])
-                    X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
-
+        r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
+        if gammaed:
+            org_rgb.append([r_, g_, b_])
+            gamma_r_ = gamma(r_)
+            gamma_g_ = gamma(g_)
+            gamma_b_ = gamma(b_)
+            X.append([gamma_r_, gamma_g_, gamma_b_])
+            X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+            v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
         else:
-            r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
-            if gammaed:
-                # print("rgb: {}".format(json_x[k]))
-                org_rgb.append([r_, g_, b_])
-                gamma_r_ = gamma(r_)
-                gamma_g_ = gamma(g_)
-                gamma_b_ = gamma(b_)
-                # print("gammed: {}".format([gamma_r_, gamma_g_, gamma_b_]))
-                # if gamma_g_ > gamma_b_:
-                #     print(k)
-                if gamma_g_ < 0.4:
-                    # if gamma_b_ <= 0.5:
-                    if gamma_b_ > 0.5:
-                        X.append([gamma_r_, gamma_g_, gamma_b_])
-                        X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-                        v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                        Y.append(v_[index])
-                        rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
-                else:
-                    bad_g += 1
-                    print(k)
+            # 只对r, g gamma
+            g_ = gamma(g_)
+            r_ = gamma(r_)
+            if g_ < 0.4:
+                X.append([r_, g_, b_])
+                X_dict[k] = [r_, g_, b_]
+                v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                Y.append(v_[index])
+                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
 
-            else:
-                # 只对r, g gamma
-                g_ = gamma(g_)
-                r_ = gamma(r_)
-                if g_ < 0.4:
-                    X.append([r_, g_, b_])
-                    X_dict[k] = [r_, g_, b_]
-                    v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
-                    Y.append(v_[index])
-                    rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-                    # 69/172 不大行...
 
     X = np.array(X)
     Y = np.array(Y)
@@ -265,9 +226,6 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
     print(X.shape)
     print(len(rgb_ImgName))
     print(len(X_dict))
-
-
-    # show_rgb_gamma(org_rgb, gammed_rgb, green_blue)
 
     return X, Y, rgb_ImgName, X_dict
 
@@ -405,19 +363,10 @@ def overfiting(X, Y, index, green_blue):
 
 if __name__ == "__main__":
 
-    # merge data1 and 2
-    prepare_data()
-
-    # js_x = json.load(open(r'./all_data_rgb3.json', 'r'))   # rgb float value   229 numbers
-    # js_y = json.load(open(r'./all_data_lab.json', 'r'))    # lab value
-
-    # js_x = json.load(open(r'./blue_color.json', 'r'))
-    # js_y = json.load(open(r'./blue_lab.json', 'r'))
-    js_x = json.load(open(r'./all_blue_color.json', 'r'))
-    js_y = json.load(open(r'./all_blue_lab.json', 'r'))
+    js_x = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_color.json', 'r'))
+    js_y = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_lab.json', 'r'))
 
     print("all blue data: {}".format(len(js_y)))
-    # green: 0, blue: 1
     green_blue = 1
 
     flags = ['x', 'y', 'z']
@@ -430,7 +379,7 @@ if __name__ == "__main__":
         assert X.shape[0] == Y.shape[0]
 
         # use xgboost
-        hyperparameter_searching(X, Y, i, green_blue)
+        # hyperparameter_searching(X, Y, i, green_blue)
         overfiting(X, Y, i, green_blue)
         cross_val(X, Y, i, green_blue, rgb_ImgName)
 
