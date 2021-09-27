@@ -416,7 +416,8 @@ if __name__ == "__main__":
         print("for {} value".format(flags[i]))
         X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
         assert X.shape[0] == Y.shape[0]
-
+        
+        # 注意交叉验证, random_state= 多尝试几个值..
         X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=66)
         # hyperparameter_searching(X, Y, i, green_blue)
         # overfiting(X, Y, i, green_blue)
