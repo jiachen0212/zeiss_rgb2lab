@@ -287,9 +287,9 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
 
     X = np.array(X)
     Y = np.array(Y)
-    print(X.shape)
-    print(len(rgb_ImgName))
-    print(len(X_dict))
+    # print(X.shape)
+    # print(len(rgb_ImgName))
+    # print(len(X_dict))
 
     # show_b_gamma(org_b_gammaes_b)
     # show_rgb_gamma(org_rgb, gammed_rgb, green_blue)
@@ -358,54 +358,55 @@ def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
 
         if abs(pre_l - real_l) <= 0.5 and abs(pre_a - real_a) <= 0.5 and abs(pre_b - real_b) <= 0.5:
             c += 1
-        else:
-            print("data: {}, diff l: {}, diff a: {}, diff b: {}".format(k, abs(pre_l - real_l), abs(pre_a - real_a),
-                                                                        abs(pre_b - real_b)))
-        # green_all_dict[''.join(a+',' for a in js_x[k])] = 1
-        if not green_blue:
-            blue_bad_a_dict[''.join(str(a) + ',' for a in X_dict[k])] = [abs(pre_a - real_a), k]
-
-
-        if abs(pre_l - real_l) > 0.5:
-            bad_l += 1
-            f_bad_l.write(k + '\n')
-            f_bad_l.write("rgb: {}".format(js_x[k]) + '\n')
-            f_bad_l.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
-            f_bad_l.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
-                                                                     abs(pre_b - real_b)) + '\n')
-
-        if abs(pre_a - real_a) > 0.5:
-            bad_a += 1
-            f_bad_a.write(k + '\n')
-            f_bad_a.write("rgb: {}".format(js_x[k]) + '\n')
-            f_bad_a.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
-            f_bad_a.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
-                                                                     abs(pre_b - real_b)) + '\n')
-
-            bad_a_rgb.append([float(a) for a in js_x[k]])
-
-        else:
-            ok_a_rgb.append([float(a) for a in js_x[k]])
-
-        bad_a_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_a - real_a)
-
-        if abs(pre_b - real_b) > 0.5:
-            bad_b += 1
-            f_bad_b.write(k + '\n')
-            f_bad_b.write("rgb: {}".format(js_x[k]) + '\n')
-
-            f_bad_b.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
-            f_bad_b.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
-                                                                     abs(pre_b - real_b)) + '\n')
-
-            bad_b_rgb.append([float(a) for a in js_x[k]])
-
-        bad_b_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_b - real_b)
-
     print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)))
-    ff.write('\n')
-    ff.write("bad_L: {}, bad_A:{}, bad_B:{}".format(bad_l, bad_a, bad_b) + '\n')
-    ff.write("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)) + '\n')
+        # else:
+        #     print("data: {}, diff l: {}, diff a: {}, diff b: {}".format(k, abs(pre_l - real_l), abs(pre_a - real_a),
+        #                                                                 abs(pre_b - real_b)))
+        # # green_all_dict[''.join(a+',' for a in js_x[k])] = 1
+        # if not green_blue:
+        #     blue_bad_a_dict[''.join(str(a) + ',' for a in X_dict[k])] = [abs(pre_a - real_a), k]
+        #
+        #
+        # if abs(pre_l - real_l) > 0.5:
+        #     bad_l += 1
+        #     f_bad_l.write(k + '\n')
+        #     f_bad_l.write("rgb: {}".format(js_x[k]) + '\n')
+        #     f_bad_l.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+        #     f_bad_l.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+        #                                                              abs(pre_b - real_b)) + '\n')
+        #
+        # if abs(pre_a - real_a) > 0.5:
+        #     bad_a += 1
+        #     f_bad_a.write(k + '\n')
+        #     f_bad_a.write("rgb: {}".format(js_x[k]) + '\n')
+        #     f_bad_a.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+        #     f_bad_a.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+        #                                                              abs(pre_b - real_b)) + '\n')
+        #
+        #     bad_a_rgb.append([float(a) for a in js_x[k]])
+        #
+        # else:
+        #     ok_a_rgb.append([float(a) for a in js_x[k]])
+        #
+        # bad_a_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_a - real_a)
+        #
+        # if abs(pre_b - real_b) > 0.5:
+        #     bad_b += 1
+        #     f_bad_b.write(k + '\n')
+        #     f_bad_b.write("rgb: {}".format(js_x[k]) + '\n')
+        #
+        #     f_bad_b.write("real lab: {}, pred lab: {}".format(js_y[k], [pre_l, pre_a, pre_b]) + '\n')
+        #     f_bad_b.write("diff_l: {}, diff_a: {}, diff_b:{}".format(abs(pre_l - real_l), abs(pre_a - real_a),
+        #                                                              abs(pre_b - real_b)) + '\n')
+        #
+        #     bad_b_rgb.append([float(a) for a in js_x[k]])
+        #
+        # bad_b_dict[''.join(a + ',' for a in js_x[k])] = abs(pre_b - real_b)
+
+
+    # ff.write('\n')
+    # ff.write("bad_L: {}, bad_A:{}, bad_B:{}".format(bad_l, bad_a, bad_b) + '\n')
+    # ff.write("L A B all diff in  0.5: {}, all data size: {}".format(c, len(ks)) + '\n')
 
 
     if not green_blue:
@@ -437,6 +438,19 @@ def overfiting(X, Y, index, green_blue):
     plt.show()
 
 
+
+def show_train_test(train, test):
+    aa = [i for i in range(3)]
+    plt.subplot(121)
+    for a in test:
+        plt.plot(aa, a, color='blue')
+    plt.grid()
+    plt.subplot(122)
+    for a in train:
+        plt.plot(aa, a, color='pink')
+    plt.show()
+
+
 if __name__ == "__main__":
 
     # merge data1 and 2
@@ -452,16 +466,20 @@ if __name__ == "__main__":
     txts = ["green", "blue"]
     ff = open(r'./bad_{}.txt'.format(txts[green_blue]), 'w')
     X_dict = dict()
-    for i in range(3):
-        print("for {} value".format(flags[i]))
-        X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
-        assert X.shape[0] == Y.shape[0]
+    seeds = [11,22,33,44,55,66,77,88,99]
+    for seed in seeds:
+        for i in range(3):
+            X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
+            assert X.shape[0] == Y.shape[0]
 
-        X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=66)
-        hyperparameter_searching(X, Y, i, green_blue)
-        overfiting(X, Y, i, green_blue)
-        cross_val(X_train, y_train, X, X_test, i, green_blue, rgb_ImgName)
-
-    # compare result
-    check_lab_res(green_blue, js_x, js_y, ff, X_dict)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
+            # hyperparameter_searching(X, Y, i, green_blue)
+            # overfiting(X, Y, i, green_blue)
+            cross_val(X_train, y_train, X, X_test, i, green_blue, rgb_ImgName)
+            # show train test的数据分布
+            if i == 2:
+                # 只show一次就可以
+                show_train_test(X_train, X_test)
+        # compare result
+        check_lab_res(green_blue, js_x, js_y, ff, X_dict)
 
