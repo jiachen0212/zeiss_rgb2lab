@@ -10,7 +10,8 @@ import json
 import numpy as np
 from scipy.stats import uniform, randint
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold, cross_val_score as CVS, train_test_split as TTS
+from sklearn.model_selection import train_test_split as TTS
+from sklearn.metrics import mean_squared_error
 
 def prepare_data():
     js1_all = dict()
@@ -38,25 +39,44 @@ def prepare_data():
         js_file.write(data)
 
 
-def cross_val(X, Y, index, green_blue, rgb_ImgName):
+
+def save_model(model, model_path):
+
+    model.save_model(model_path)
+
+
+def eval_model(parameters, index, x):
+
+    model = xgb.XGBRegressor(objective="reg:linear", **parameters)
+    model.load_model(r'./xgb_{}.model'.format(index))
+    res = model.predict(np.array(x))
+
+    return res.tolist()
+
+
+def eval_other_thickness():
+    other_lab = json.load(open('./other_lab.json', 'r'))
+    other_rgb = json.load(open('./other_rgb.json', 'r'))
+    X, Y = [], []
+    for k, v in other_rgb.items():
+        if k.split('_')[0] == '67':
+            X.append([gamma(v[0]/255), gamma(v[1]/255), gamma(v[2]/255)])
+            Y.append(other_lab[k])
+    return X, Y
+
+
+def cross_val(X_train, y_train, X, X_test, index, green_blue, rgb_ImgName):
     xyz_res = dict()
     single_xyz_res = r'./xyz_{}.json'.format(index)
 
-    X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=88)
-
-    # hyperparameter_searching beat parameters
     parameters = json.load(open(r'./parameter_{}_{}.json'.format(index, green_blue), 'r'))
 
     xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
-    xgb_model.fit(X, Y)
+    xgb_model.fit(X_train, y_train)
 
-    # y_pred = xgb_model.predict(X_test)
-    # for index, item in enumerate(y_pred):
-    #     value = ''.join(str(int(a)) for a in X_test[index]) + str(y_test[index])
-    #     info = rgb_ImgName[value]
-    #     xyz_res[info] = str(item)
+    # save model
+    save_model(xgb_model, r'./xgb_{}.model'.format(index))
 
-    # test all data
     y_pred = xgb_model.predict(X)
     for ii, item in enumerate(y_pred):
         value = ''.join(str(a) for a in X[ii])
@@ -66,7 +86,6 @@ def cross_val(X, Y, index, green_blue, rgb_ImgName):
     data = json.dumps(xyz_res)
     with open(single_xyz_res, 'w') as js_file:
         js_file.write(data)
-
 
 
 def report_best_scores(results, index, green_blue, n_top=3):
@@ -89,28 +108,6 @@ def report_best_scores(results, index, green_blue, n_top=3):
 
 
 def hyperparameter_searching(X, y, index, green_blue):
-
-
-    # xgb_model = xgb.XGBRegressor()
-    # params = {
-    #     "colsample_bytree": uniform(0.9, 0.1),
-    #     "gamma": uniform(0, 0.),
-    #     "learning_rate": uniform(0.03, 0.3),  # default 0.1
-    #     "max_depth": randint(2, 6),  # default 3
-    #     "n_estimators": randint(100, 150),  # default 100
-    #     "subsample": uniform(0.6, 0.4)
-    # }
-
-
-    # xgb_model = xgb.XGBRegressor()
-    # params = {
-    #     "colsample_bytree": uniform(0.9, 0.1),
-    #     "gamma": uniform(0, 0.),   # gamma越小, 模型越复杂..
-    #     "learning_rate": uniform(0.01, 0.5),  # default 0.1
-    #     "max_depth": randint(2, 8),  # default 3
-    #     "n_estimators": randint(100, 150),  # default 100
-    #     "subsample": uniform(0.6, 0.4)
-    # }
 
     xgb_model = xgb.XGBRegressor()
     params = {
@@ -193,7 +190,6 @@ def show_b_gamma(org):
 
 def load_data(json_x, json_y, index, green_blue, gammaed=False):
     X_dict = dict()
-    # org_b_gammaes_b = []
     org_rgb = []
     gammed_rgb = []
     rgb_ImgName = dict()
@@ -394,7 +390,7 @@ def overfiting(X, Y, index, green_blue):
 
     cvresult1 = xgb.cv(param1, dfull, num_round)
 
-    fig, ax = plt.subplots(1, figsize=(15,8))
+    fig, ax = plt.subplots(1, figsize=(15, 8))
     ax.set_ylim(top=5)
     ax.grid()
     ax.plot(range(1, 201), cvresult1.iloc[:, 0], c="red", label="train,original")
@@ -405,16 +401,8 @@ def overfiting(X, Y, index, green_blue):
 
 if __name__ == "__main__":
 
-    # merge data1 and 2
-    prepare_data()
-
-    # js_x = json.load(open(r'./all_data_rgb3.json', 'r'))   # rgb float value   229 numbers
-    # js_y = json.load(open(r'./all_data_lab.json', 'r'))    # lab value
-
-    # js_x = json.load(open(r'./blue_color.json', 'r'))
-    # js_y = json.load(open(r'./blue_lab.json', 'r'))
-    js_x = json.load(open(r'./all_blue_color.json', 'r'))
-    js_y = json.load(open(r'./all_blue_lab.json', 'r'))
+    js_x = json.load(open(r'./blue_color.json', 'r'))
+    js_y = json.load(open(r'./blue_lab.json', 'r'))
 
     print("all blue data: {}".format(len(js_y)))
     # green: 0, blue: 1
@@ -429,12 +417,24 @@ if __name__ == "__main__":
         X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
         assert X.shape[0] == Y.shape[0]
 
-        # use xgboost
-        hyperparameter_searching(X, Y, i, green_blue)
-        overfiting(X, Y, i, green_blue)
-        cross_val(X, Y, i, green_blue, rgb_ImgName)
+        X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=66)
+        # hyperparameter_searching(X, Y, i, green_blue)
+        # overfiting(X, Y, i, green_blue)
+        cross_val(X_train, y_train, X, X_test, i, green_blue, rgb_ImgName)
 
     # compare result
     check_lab_res(green_blue, js_x, js_y, ff, X_dict)
 
 
+    # inference
+    X, Y = eval_other_thickness()
+    res = []
+    for i in range(3):
+        params = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\蓝色大于0.5训测拆分\parameter_{}_1.json'.format(i), 'r'))
+        res.append(eval_model(params, i, X))
+    print(res)
+    # lab_res = []
+    for i in range(len(res[0])):
+        a = [res[0][i], res[1][i], res[2][i]]
+        # print(a)
+        # print([a[j]- Y[i][j] for j in range(3)])

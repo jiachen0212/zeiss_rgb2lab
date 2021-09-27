@@ -79,10 +79,10 @@ for i in range(nums):
     f.write('\n')
 
 # lab的diff在0.5以内, rgb的diff却>15.. 是不是有点异常了啊..?
-# blue_color = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_color.json', 'r'))
-# blue_lab = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_lab.json', 'r'))
-blue_color = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\green_0924_backup\green_color.json', 'r'))
-blue_lab = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\green_0924_backup\green_lab.json', 'r'))
+blue_color = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_color.json', 'r'))
+blue_lab = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\blue_0926 backup\blue_lab.json', 'r'))
+# blue_color = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\green_0924_backup\green_color.json', 'r'))
+# blue_lab = json.load(open(r'D:\work\project\卡尔蔡司AR镀膜\poc\green_0924_backup\green_lab.json', 'r'))
 print(len(blue_color))
 c = 0
 assert len(diff_labs) == len(diff_rgbs)
@@ -114,10 +114,10 @@ for i in range(len(diff_labs)):
 print("lab diff in 0.5, rgb diff > 10: {}".format(c))
 print(len(blue_color))
 data = json.dumps(blue_color)
-with open('./green_color.json', 'w') as js_file:
+with open('./blue_color.json', 'w') as js_file:
     js_file.write(data)
 
 data = json.dumps(blue_lab)
-with open('./green_lab.json', 'w') as js_file:
+with open('./blue_lab.json', 'w') as js_file:
     js_file.write(data)
 

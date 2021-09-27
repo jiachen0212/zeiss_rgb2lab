@@ -38,25 +38,14 @@ def prepare_data():
         js_file.write(data)
 
 
-def cross_val(X, Y, index, green_blue, rgb_ImgName):
+def cross_val(X_train, y_train, X, X_test, index, green_blue, rgb_ImgName):
     xyz_res = dict()
     single_xyz_res = r'./xyz_{}.json'.format(index)
 
-    X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=88)
-
-    # 查看train中异常样本数量
-    for ii, item in enumerate(X_train):
-        value = ''.join(str(a) for a in X_train[ii])
-        key_ = rgb_ImgName[value]
-        if key_ in ["23_1", "23_2", "23_3", "23_4", "23_5"]:
-            print(key_, '=====')
-
-
-    # hyperparameter_searching beat parameters
     parameters = json.load(open(r'./parameter_{}_{}.json'.format(index, green_blue), 'r'))
 
     xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
-    xgb_model.fit(X, Y)
+    xgb_model.fit(X_train, y_train)
 
     # y_pred = xgb_model.predict(X_test)
     # for index, item in enumerate(y_pred):
@@ -367,10 +356,10 @@ if __name__ == "__main__":
         X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
         assert X.shape[0] == Y.shape[0]
 
-        # use xgboost
-        # hyperparameter_searching(X, Y, i, green_blue)
+        X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=66)
+        hyperparameter_searching(X, Y, i, green_blue)
         overfiting(X, Y, i, green_blue)
-        cross_val(X, Y, i, green_blue, rgb_ImgName)
+        cross_val(X_train, y_train, X, X_test, i, green_blue, rgb_ImgName)
 
     # compare result
     check_lab_res(green_blue, js_x, js_y, ff, X_dict)
