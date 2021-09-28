@@ -12,32 +12,7 @@ from scipy.stats import uniform, randint
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split as TTS
 from sklearn.metrics import mean_squared_error
-
-def prepare_data():
-    js1_all = dict()
-    js2_all = dict()
-    js1 = json.load(open(r'./all_col3.json', 'r'))
-    js1_1 = json.load(open(r'./all_col3_0821.json', 'r'))
-    # for k, v in js1.items():
-    #     if len(v) == 6:
-    #         print(k)
-
-    js2 = json.load(open(r'./0812lab_value1.json', 'r'))
-    js2_1 = json.load(open(r'./all_lab_value.json', 'r'))
-
-    js1_all.update(js1)
-    js1_all.update(js1_1)
-    js2_all.update(js2_1)
-    js2_all.update(js2)
-
-    data = json.dumps(js1_all)
-    with open(r'./all_data_rgb3.json', 'w') as js_file:
-        js_file.write(data)
-
-    data = json.dumps(js2_all)
-    with open(r'./all_data_lab.json', 'w') as js_file:
-        js_file.write(data)
-
+import shutil
 
 
 def save_model(model, model_path):
@@ -60,7 +35,7 @@ def eval_other_thickness():
     X, Y = [], []
     for k, v in other_rgb.items():
         if k.split('_')[0] == '67':
-            X.append([gamma(v[0]/255), gamma(v[1]/255), gamma(v[2]/255)])
+            X.append([gamma1(v[0]/255), gamma1(v[1]/255), gamma1(v[2]/255)])
             Y.append(other_lab[k])
     return X, Y
 
@@ -154,7 +129,7 @@ def lab2xyz(l,a,b):
     return [x,y,z]
 
 
-def gamma(a):
+def gamma1(a):
     if a > 0.04045:
         a = np.power((a+0.055)/1.055, 2.4)
     else:
@@ -163,13 +138,23 @@ def gamma(a):
     return a
 
 
-def gamma_b(a):
+def gamma2(a):
     if a > 0.04045:
-        a = np.power((a+0.055)/1.255, 2.4)
+        a = np.power((a+0.055)/1.055, 2.5)
     else:
         a /= 14.92
 
     return a
+
+
+def gamma3(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/1.055, 1.7)
+    else:
+        a /= 12.92
+
+    return a
+
 
 def show_rgb_gamma(org_rgb, gammed_rgb, green_blue):
     aa = [0, 1, 2]
@@ -203,6 +188,15 @@ def show_gammaed_b(bs):
     plt.show()
 
 
+def show_gammaed_data(X):
+    print(len(X))
+    aa = [i for i in range(3)]
+    for a in X:
+        plt.plot(aa, a, color='pink')
+    plt.grid()
+    plt.show()
+
+
 def load_data(json_x, json_y, index, green_blue, gammaed=False):
     X_dict = dict()
     org_rgb = []
@@ -213,12 +207,12 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
         r_, g_, b_ = [float(a) / 255 for a in json_x[k]]
         if gammaed:
             org_rgb.append([r_, g_, b_])
-            gamma_r_ = gamma(r_)
-            # gamma_g_ = gamma_b(g_)
-            gamma_g_ = gamma(g_)
+            gamma_r_ = gamma1(r_)
+            gamma_g_ = gamma1(g_)
             gammaed_g.append(gamma_g_)
-            gamma_b_ = gamma(b_)
-            # 不做gamma矫正的话, g值阈值是0.6 做了gamma矫正, g值阈值是0.4
+            gamma_b_ = gamma1(b_)
+
+            # # 不做gamma矫正的话, g值阈值是0.6 做了gamma矫正, g值阈值是0.4
             if gamma_g_ < 0.4:
                 # if gamma_b_ <= 0.6:
                 if gamma_b_ > 0.6:
@@ -228,10 +222,15 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
                     Y.append(v_[index])
                     rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
+                # X.append([gamma_r_, gamma_g_, gamma_b_])
+                # X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+                # v_ = lab2xyz(json_y[k][0], json_y[k][1], json_y[k][2])
+                # Y.append(v_[index])
+                # rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
+
         else:
-            # 只对r, g gamma
-            g_ = gamma(g_)
-            r_ = gamma(r_)
+            g_ = gamma1(g_)
+            r_ = gamma1(r_)
             if g_ < 0.4:
                 X.append([r_, g_, b_])
                 X_dict[k] = [r_, g_, b_]
@@ -241,7 +240,7 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
 
     X = np.array(X)
     Y = np.array(Y)
-    # show_gammaed_b(gammaed_g)
+    # show_gammaed_data(X)
 
     return X, Y, rgb_ImgName, X_dict
 
@@ -282,13 +281,25 @@ def split_blueand_green():
 
 
 import cv2
+import os
 def imread(path):
     img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), -1)
     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
     return img
 
 
-def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
+def copy_bad_sample(img_dir, k):
+    copy_dir = r'C:\Users\15974\Desktop\ccc'
+    index_dir = str(int(k.split('_')[0]) - 50)
+    file_path = os.path.join(img_dir, index_dir, k.split('_')[1]+'.bmp')
+    print(file_path)
+    copy_path = os.path.join(copy_dir, index_dir)
+    if not os.path.exists(copy_path):
+        os.mkdir(copy_path)
+    shutil.copy(file_path, os.path.join(copy_path, k.split('_')[1]+'.bmp'))
+
+
+def check_lab_res(green_blue, js_x, js_y, ff, X_dict, img_dir):
     aa = [i for i in range(3)]
 
     blue_bad_a_dict = dict()
@@ -306,29 +317,58 @@ def check_lab_res(green_blue, js_x, js_y, ff, X_dict):
         if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
             c += 1
         else:
-            line = "data: {}, diff l: {}, diff a: {}, diff b: {}".format(str(int(k.split('_')[0])-50) + '_' + k.split('_')[1], (pre_l-real_l), (pre_a-real_a), (pre_b-real_b))
-            # print(line)
+            line = "data: {}, real lab: {}, pred lab: {}, diff: {}".format(str(int(k.split('_')[0])-50) + '_' + k.split('_')[1], [real_l, real_a, real_b], [pre_l, pre_a, pre_b], [pre_l-real_l, pre_a-real_a, pre_b-real_b])
+            print(line)
             blue_diff.write(line+'\n')
+            # 把错分的样本复制出来
+            copy_bad_sample(img_dir, k)
 
         if green_blue:
             blue_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
     bad_a = []
     ok_a = []
-    # if green_blue:
-    #     plt.title("gamma_ed_rgb diff ok_ng case")
-    #     for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
-    #         gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
-    #         if diff_a[0] > 0.5:
-    #             bad_a.append(diff_a[1])
-    #             plt.subplot(121)
-    #             plt.plot(aa, gammed_rgb, color='black')
-    #             plt.grid()
-    #         else:
-    #             plt.subplot(122)
-    #             plt.plot(aa, gammed_rgb, color='pink')
-    #             ok_a.append(diff_a[1])
-    #     plt.grid()
-    #     plt.show()
+    if green_blue:
+        plt.title("gamma_ed_rgb diff ok_ng case")
+        for gamma_ed_rgb, diff_a in blue_bad_a_dict.items():
+            gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
+            if diff_a[0] > 0.5:
+                bad_a.append(gammed_rgb)
+                plt.subplot(121)
+                plt.plot(aa, gammed_rgb, color='black')
+                plt.grid()
+            else:
+                plt.subplot(122)
+                plt.plot(aa, gammed_rgb, color='pink')
+                ok_a.append(gammed_rgb)
+        plt.grid()
+        plt.show()
+
+    # 统计错分正分的 r/g g/b斜率
+    ng_rg_rate, ng_gb_rate = [], []
+    for ng_ in bad_a:
+        ng_rg_rate.append(ng_[1]/ng_[0])
+        ng_gb_rate.append(ng_[2] / ng_[1])
+    # print("ng: ")
+    # print(ng_rg_rate)
+    # print(ng_gb_rate)
+    # print("\nok: ")
+    plt.title("blue: ng and ok")
+    plt.subplot(211)
+    plt.grid()
+    plt.scatter([a for a in range(len(ng_rg_rate))], ng_rg_rate, color='pink', label='g/r')
+    plt.scatter([a for a in range(len(ng_gb_rate))], ng_gb_rate, color='black', label='b/g')
+    plt.legend()
+    ok_rg_rate, ok_gb_rate = [], []
+    for ok_ in ok_a:
+        ok_rg_rate.append(ok_[1]/ok_[0])
+        ok_gb_rate.append(ok_[2]/ok_[1])
+    plt.subplot(212)
+    plt.grid()
+    plt.scatter([a for a in range(len(ok_rg_rate))], ok_rg_rate, color='yellow', label='g/r')
+    plt.scatter([a for a in range(len(ok_gb_rate))], ok_gb_rate, color='blue', label='b/g')
+    plt.legend()
+    plt.show()
+
 
     print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(x_pred)))
 
@@ -362,18 +402,25 @@ def show_train_test(train, test):
     plt.show()
 
 
+
 if __name__ == "__main__":
 
+    # js_x = json.load(open(r'./all_blue_color.json', 'r'))
+    # js_y = json.load(open(r'./all_blue_lab.json', 'r'))
     js_x = json.load(open(r'./blue_color.json', 'r'))
     js_y = json.load(open(r'./blue_lab.json', 'r'))
+    print(len(js_y))
+
+    img_dir = r'D:\work\project\卡尔蔡司AR镀膜\poc\20210924\20210924'
+
     green_blue = 1
 
     flags = ['x', 'y', 'z']
     txts = ["green", "blue"]
     ff = open(r'./bad_{}.txt'.format(txts[green_blue]), 'w')
     X_dict = dict()
-    seeds = [11,22,33,44,55,66,77,88,99]
-    # seeds = [55]
+    # seeds = [11,22,33,44,55,66,77,88,99]
+    seeds = [33]
     for seed in seeds:
         for i in range(3):
             X, Y, rgb_ImgName, X_dict = load_data(js_x, js_y, i, green_blue, gammaed=True)
@@ -384,8 +431,8 @@ if __name__ == "__main__":
             cross_val(X_train, y_train, X, X_test, i, green_blue, rgb_ImgName)
 
             # show train test的数据分布
-            if i == 2:
-                # 只show一次就可以
-                show_train_test(X_train, X_test)
+            # if i == 2:
+            #     # 只show一次就可以
+            #     show_train_test(X_train, X_test)
 
-        check_lab_res(green_blue, js_x, js_y, ff, X_dict)
+        check_lab_res(green_blue, js_x, js_y, ff, X_dict, img_dir)
