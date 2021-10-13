@@ -212,7 +212,7 @@ def xyz2lab(x, y, z):
     return [l, a, b]
 
 
-def check_lab_res(tmp_dir, js_y, X_dict):
+def check_lab_res(seed, tmp_dir, js_y, X_dict):
 
     aa = [i for i in range(3)]
     green_bad_a_dict = dict()
@@ -237,23 +237,9 @@ def check_lab_res(tmp_dir, js_y, X_dict):
 
         green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
 
-    print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(x_pred)))
+    print("seed: {}, L A B all diff in  0.5: {}, all data size: {}".format(seed, c, len(x_pred)))
 
-    # bad_a = []
-    # ok_a = []
-    # plt.title("gamma_ed_rgb diff ok_ng case")
-    # for gamma_ed_rgb, diff_a in green_bad_a_dict.items():
-    #     gammed_rgb = [float(a) for a in gamma_ed_rgb.split(',')[:-1]]
-    #     if diff_a[0] > 0.5:
-    #         bad_a.append(diff_a[1])
-    #         plt.plot(aa, gammed_rgb, color='black', label='diff ng')
-    #     else:
-    #         plt.plot(aa, gammed_rgb, color='pink')
-    #         ok_a.append(diff_a[1])
-    # plt.legend()
-    # plt.show()
-    # print("bad a: {}".format(bad_a))
-    # print("ok a: {}".format(ok_a))
+    return c
 
 def overfiting(X, Y, index, save_params_dir):
     dfull = xgb.DMatrix(X, Y)
@@ -282,11 +268,12 @@ if __name__ == "__main__":
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
 
     # data1
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    # 0924
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
     save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
 
@@ -294,17 +281,20 @@ if __name__ == "__main__":
     X_dict = dict()
 
     # 交叉验证
-    seeds = [11, 22, 33, 44, 55, 66, 77, 88]   # 44
+    seeds = [11*i for i in range(1, 20)]
+    res = 0
     for seed in seeds:
         for i in range(3):
             X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
-
-            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=seed)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
             # hyperparameter_searching(X, Y, i, save_params_dir)
             # overfiting(X, Y, i, save_params_dir)
 
             cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, i, rgb_ImgName)
 
         # compare results
-        check_lab_res(tmp_dir, LAB, X_dict)
+        count = check_lab_res(seed, tmp_dir, LAB, X_dict)
+        res += count
+
+    print("交叉验证的acc: {}".format(res/(len(seeds)*len(X_dict))))
 

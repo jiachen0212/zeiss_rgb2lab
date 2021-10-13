@@ -211,7 +211,7 @@ def xyz2lab(x, y, z):
     return [l, a, b]
 
 
-def check_lab_res(tmp_dir, js_y, X_dict):
+def check_lab_res(seed, tmp_dir, js_y, X_dict):
 
     aa = [i for i in range(3)]
     green_bad_a_dict = dict()
@@ -236,7 +236,9 @@ def check_lab_res(tmp_dir, js_y, X_dict):
 
         green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
 
-    print("L A B all diff in  0.5: {}, all data size: {}".format(c, len(x_pred)))
+    print("seed: {}, L A B all diff in  0.5: {}, all data size: {}".format(seed, c, len(x_pred)))
+
+    return c
 
     # bad_a = []
     # ok_a = []
@@ -281,17 +283,18 @@ if __name__ == "__main__":
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
 
     # data1
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
     save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
 
     tmp_dir = r'D:\work\project\卡尔蔡司膜色缺陷\tmp_xyz_res_js'
     X_dict = dict()
-    seeds = [33]
+    seeds = [11 * i for i in range(1, 20)]
+    res = 0
     for seed in seeds:
         for i in range(3):
             X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
@@ -302,7 +305,9 @@ if __name__ == "__main__":
 
             cross_val(tmp_dir, save_params_dir, X_train, y_train, X_test, i, rgb_ImgName)
 
-        # compare results
-        check_lab_res(tmp_dir, LAB, X_dict)
+        count = check_lab_res(seed, tmp_dir, LAB, X_dict)
+        res += count
+
+    print("交叉验证的acc: {}".format(res / (len(seeds) * len(X_dict)*0.2)))
 
 
