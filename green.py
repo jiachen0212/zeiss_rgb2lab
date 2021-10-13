@@ -7,6 +7,7 @@
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
 import xgboost as xgb
 import json
+import warnings
 import numpy as np
 from scipy.stats import uniform, randint
 import matplotlib.pyplot as plt
@@ -211,26 +212,6 @@ def xyz2lab(x, y, z):
     return [l, a, b]
 
 
-
-def split_blueand_green():
-    # 蓝绿样本划分
-    for k, v in js_x.items():
-        v = [int(a) for a in v]
-        dir_index = int(k.split('_')[0])
-        # rgb 判断g值是否大于b值即可.
-        if v[1] > v[2]:
-            if dir_index > 21:
-                print(k, '==')
-
-
-
-import cv2
-def imread(path):
-    img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), -1)
-    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-    return img
-
-
 def check_lab_res(tmp_dir, js_y, X_dict):
 
     aa = [i for i in range(3)]
@@ -251,7 +232,7 @@ def check_lab_res(tmp_dir, js_y, X_dict):
             c += 1
         else:
             line = "data: {}, diff l: {}, diff a: {}, diff b: {}".format(str(int(k.split('_')[0])-50) + '_' + k.split('_')[1], (pre_l-real_l), (pre_a-real_a), (pre_b-real_b))
-            print(line)
+            # print(line)
             # blue_diff.write(line+'\n')
 
         green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
@@ -292,7 +273,7 @@ def overfiting(X, Y, index, save_params_dir):
 
 
 if __name__ == "__main__":
-
+    warnings.filterwarnings('ignore')
     # merge data1 and 0924
     merge_data()
 
@@ -311,16 +292,19 @@ if __name__ == "__main__":
 
     tmp_dir = r'D:\work\project\卡尔蔡司膜色缺陷\tmp_xyz_res_js'
     X_dict = dict()
-    for i in range(3):
-        X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
 
-        X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=55)
-        # hyperparameter_searching(X, Y, i, save_params_dir)
-        # overfiting(X, Y, i, save_params_dir)
+    # 交叉验证
+    seeds = [11, 22, 33, 44, 55, 66, 77, 88]   # 44
+    for seed in seeds:
+        for i in range(3):
+            X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
 
-        cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, i, rgb_ImgName)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=seed)
+            # hyperparameter_searching(X, Y, i, save_params_dir)
+            # overfiting(X, Y, i, save_params_dir)
 
-    # compare results
-    check_lab_res(tmp_dir, LAB, X_dict)
+            cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, i, rgb_ImgName)
 
+        # compare results
+        check_lab_res(tmp_dir, LAB, X_dict)
 

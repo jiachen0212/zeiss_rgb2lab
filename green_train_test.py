@@ -39,7 +39,7 @@ def merge_data():
     assert len(js1_all) == len(js2_all)
 
 
-def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, index, rgb_ImgName):
+def cross_val(tmp_dir, save_params_dir, X_train, y_train, X_test, index, rgb_ImgName):
     xyz_res = dict()
     single_xyz_res = os.path.join(tmp_dir, 'xyz_{}.json'.format(index))
 
@@ -48,10 +48,10 @@ def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, index, rgb_
     xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
     xgb_model.fit(X_train, y_train)
 
-    # test all data
-    y_pred = xgb_model.predict(X)
+    # only test test_data
+    y_pred = xgb_model.predict(X_test)
     for ii, item in enumerate(y_pred):
-        value = ''.join(str(a) for a in X[ii])
+        value = ''.join(str(a) for a in X_test[ii])
         info = rgb_ImgName[value]
         xyz_res[info] = str(item)
 
@@ -231,7 +231,7 @@ def check_lab_res(tmp_dir, js_y, X_dict):
             c += 1
         else:
             line = "data: {}, diff l: {}, diff a: {}, diff b: {}".format(str(int(k.split('_')[0])-50) + '_' + k.split('_')[1], (pre_l-real_l), (pre_a-real_a), (pre_b-real_b))
-            print(line)
+            # print(line)
             # blue_diff.write(line+'\n')
 
         green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
@@ -291,16 +291,18 @@ if __name__ == "__main__":
 
     tmp_dir = r'D:\work\project\卡尔蔡司膜色缺陷\tmp_xyz_res_js'
     X_dict = dict()
-    for i in range(3):
-        X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
+    seeds = [33]
+    for seed in seeds:
+        for i in range(3):
+            X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
 
-        X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=55)
-        # hyperparameter_searching(X, Y, i, save_params_dir)
-        # overfiting(X, Y, i, save_params_dir)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
+            # hyperparameter_searching(X, Y, i, save_params_dir)
+            # overfiting(X, Y, i, save_params_dir)
 
-        cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, i, rgb_ImgName)
+            cross_val(tmp_dir, save_params_dir, X_train, y_train, X_test, i, rgb_ImgName)
 
-    # compare results
-    check_lab_res(tmp_dir, LAB, X_dict)
+        # compare results
+        check_lab_res(tmp_dir, LAB, X_dict)
 
 
