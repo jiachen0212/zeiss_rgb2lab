@@ -5,6 +5,7 @@ import cv2
 import json
 import numpy as np
 import xlrd
+import matplotlib.pyplot as plt
 
 
 def imread(path):
@@ -153,6 +154,7 @@ def show_distribute(r_):
 
 def get_distribute(r_, topk):
     distribute = collections.Counter(r_)
+    topk = min(topk, len(distribute))
     # show_distribute(r_)
     sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
     sum_color = 0
@@ -181,7 +183,6 @@ def get_distribute_(r_, percent):
     return float(sum_color / count)
 
 
-import matplotlib.pyplot as plt
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
@@ -226,7 +227,7 @@ def cal_color(img, area):
     # filtered_r = get_distribute_(tmp[:, 0], part_percent)
     # filtered_g = get_distribute_(tmp[:, 1], part_percent)
     # filtered_b = get_distribute_(tmp[:, 2], part_percent)
-    # color = [filtered_r, filtered_g, filtered_b]
+    color = [filtered_r, filtered_g, filtered_b]
 
     # return color.astype(np.uint8)
     print(color)

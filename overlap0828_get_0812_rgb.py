@@ -52,10 +52,46 @@ def find_areas(img, color_lower, color_upper, area_threshold):
     return areas
 
 
+
+import matplotlib.pyplot as plt
+def show_distribute(r_):
+    plt.hist(x=r_, bins='auto', color='#0504aa',
+                                alpha=0.7, rwidth=0.85)
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
+
+import collections
+def get_distribute(r_, topk):
+    distribute = collections.Counter(r_)
+    topk = min(topk, len(distribute))
+    # show_distribute(r_)
+    sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
+    sum_color = 0
+    count = 0
+    for i in range(topk):
+        sum_color += sored[i][0] * sored[i][1]
+        count += sored[i][1]
+
+    return float(sum_color / count)
+
+
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
     color = img[mask != 0].mean(axis=0)
+
+    tmp = img[mask != 0]
+    topk = 6
+    # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
+    # # remove_k = 2
+    filtered_r = get_distribute(tmp[:, 0], topk)
+    filtered_g = get_distribute(tmp[:, 1], topk)
+    filtered_b = get_distribute(tmp[:, 2], topk)
+    color = [filtered_r, filtered_g, filtered_b]
+
     # return color.astype(np.uint8)
     return color
 
@@ -88,6 +124,7 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
     ], np.int32)
 
     color = cal_color(img, area)
+    print(color)
     cv2.drawContours(draw, [area], 0, (0, 0, 255), 2)
     cv2.putText(draw, "color: {}".format(color), (100, 100), cv2.FONT_ITALIC, 3, (0, 255, 255), 2)
 
@@ -139,5 +176,5 @@ if __name__ == '__main__':
         dir_path = os.path.join(base_dir, str(i))
         main(all_col3, i, dir_path)
     data = json.dumps(all_col3)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812rgb.json', 'w') as js_file:
+    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812rgb_distracted.json', 'w') as js_file:
         js_file.write(data)
