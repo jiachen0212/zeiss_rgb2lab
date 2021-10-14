@@ -175,6 +175,7 @@ if __name__ == '__main__':
     for i in range(1, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
         main(all_col3, i, dir_path)
+    # 落盘distracted data
     data = json.dumps(all_col3)
     with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812rgb_distracted.json', 'w') as js_file:
         js_file.write(data)

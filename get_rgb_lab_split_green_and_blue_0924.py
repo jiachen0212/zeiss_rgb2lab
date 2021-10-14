@@ -154,6 +154,7 @@ def show_distribute(r_):
 
 def get_distribute(r_, topk):
     distribute = collections.Counter(r_)
+    # 防止设置的topk超过分布数目
     topk = min(topk, len(distribute))
     # show_distribute(r_)
     sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
