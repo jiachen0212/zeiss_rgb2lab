@@ -62,11 +62,85 @@ def find_areas(img, color_lower, color_upper, area_threshold):
     return areas
 
 
+def get_3_popular(counts, values):
+    pop1_index = counts.index(max(counts))
+    pop1_val = values[pop1_index]
+    counts.pop(pop1_index)
+    values.pop(pop1_index)
+
+    pop2_index = counts.index(max(counts))
+    pop2_val = values[pop2_index]
+    counts.pop(pop2_index)
+    values.pop(pop2_index)
+
+    pop3_index = counts.index(max(counts))
+    pop3_val = values[pop3_index]
+    counts.pop(pop3_index)
+    values.pop(pop3_index)
+
+    pop4_index = counts.index(max(counts))
+    pop4_val = values[pop4_index]
+    # counts.pop(pop4_index)
+    # values.pop(pop4_index)
+    return float(pop3_val + pop2_val + pop1_val + pop4_val) / 4
+
+
+
+import collections
+def filter_get_popular_rgb(tmp):
+    max_rgb = tmp.max(axis=0)
+    min_rgb = tmp.min(axis=0)
+
+    r_ = tmp[:, 0].tolist()
+    res = collections.Counter(r_)
+    ks = []
+    vs = []
+    for k, v in res.items():
+        if k < max_rgb[0] and k > min_rgb[0]:
+            ks.append(k)
+            vs.append(v)
+    print(res)
+    pop_r = get_3_popular(vs, ks)
+
+    g_ = tmp[:, 1].tolist()
+    res = collections.Counter(g_)
+    ks = []
+    vs = []
+    for k, v in res.items():
+        if k < max_rgb[1] and k > min_rgb[1]:
+            ks.append(k)
+            vs.append(v)
+    print(res)
+    pop_g = get_3_popular(vs, ks)
+
+
+    b_ = tmp[:, 2].tolist()
+    res = collections.Counter(b_)
+    ks = []
+    vs = []
+    for k, v in res.items():
+        if k < max_rgb[2] and k > min_rgb[2]:
+            ks.append(k)
+            vs.append(v)
+    print(res)
+    pop_b = get_3_popular(vs, ks)
+
+    # print(popular_r, popular_g, popular_b)
+    return pop_r, pop_g, pop_b
+
+
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
     color = img[mask != 0].mean(axis=0)
+
+    # tmp = img[mask != 0]
+    # r_, g_, b_ = filter_get_popular_rgb(tmp)
+
+    # return color.astype(np.uint8)
     return color
+    # return [r_, g_, b_]
+
 
 
 def is_ok(color, color_thresholds):
@@ -84,6 +158,7 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
     if len(areas) > 1:  # 找到多个满足条件的area，返回2
         return None, None, 2, draw
 
+    # 找area的质心, 然后扩张到旁边的+-20
     moments = cv2.moments(areas[0])
     cx = moments["m10"] / moments["m00"]
     cy = moments["m01"] / moments["m00"]
@@ -124,7 +199,7 @@ def main(base_index_value):
             im_name = int(path.split('\\')[-1][:-4])
             img = imread(path)
             color, string, sig, draw = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
-            # print(color)
+            print(color)
             dir_color["{}_{}".format(dir + base_index_value, im_name)] = color.tolist()
     data = json.dumps(dir_color)
     with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'w') as js_file:
@@ -140,6 +215,8 @@ def main(base_index_value):
             green.append(k)
     assert len(blue)+len(green) == len(dir_color)
 
+    # print("blue: {}".format(blue))
+    # print("green: {}".format(green))
     return blue, green
 
 
@@ -186,7 +263,7 @@ def get_pre_dir(blue_dir_name):
 def split_blue_and_green(blue_dir_name, green_dir_name):
     color = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'r'))
     lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924lab.json', 'r'))
-    assert len(color) == 315
+    assert len(color) == len(lab)
 
     # for blue
     blue_color = dict()

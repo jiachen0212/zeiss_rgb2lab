@@ -264,16 +264,16 @@ if __name__ == "__main__":
     merge_data()
 
     # all data
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
 
     # data1
     # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
     # 0924
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
     save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
 
@@ -286,6 +286,7 @@ if __name__ == "__main__":
     for seed in seeds:
         for i in range(3):
             X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
+            # print(len(rgb_ImgName))
             X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
             # hyperparameter_searching(X, Y, i, save_params_dir)
             # overfiting(X, Y, i, save_params_dir)
@@ -297,4 +298,5 @@ if __name__ == "__main__":
         res += count
 
     print("交叉验证的acc: {}".format(res/(len(seeds)*len(X_dict))))
+
 
