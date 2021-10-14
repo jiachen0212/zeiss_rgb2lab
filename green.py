@@ -178,6 +178,8 @@ def load_data(rgb, lab, index, gammaed=False):
             gamma_r_ = gamma(r_)
             gamma_g_ = gamma(g_)
             gamma_b_ = gamma(b_)
+            # print(r_, g_, b_)
+            # print(gamma_r_, gamma_g_, gamma_b_)
             X.append([gamma_r_, gamma_g_, gamma_b_])
             X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
             v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
@@ -264,16 +266,16 @@ if __name__ == "__main__":
     merge_data()
 
     # all data
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
 
     # data1
     # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
     # 0924
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
     save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
 

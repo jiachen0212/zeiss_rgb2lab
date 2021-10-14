@@ -129,18 +129,108 @@ def filter_get_popular_rgb(tmp):
     return pop_r, pop_g, pop_b
 
 
+# def get_distribute(r_, removek):
+#     distribute = collections.Counter(r_)
+#     dis_len = len(distribute)
+#     topk = dis_len - removek*2
+#     sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
+#     sum_color = 0
+#     count = 0
+#     for i in range(topk):
+#         sum_color += sored[i][0] * sored[i][1]
+#         count += sored[i][1]
+#
+#     return float(sum_color / count)
+
+def show_distribute(r_):
+    plt.hist(x=r_, bins='auto', color='#0504aa',
+                                alpha=0.7, rwidth=0.85)
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
+
+def get_distribute(r_, topk):
+    distribute = collections.Counter(r_)
+    # show_distribute(r_)
+    sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
+    sum_color = 0
+    count = 0
+    for i in range(topk):
+        sum_color += sored[i][0] * sored[i][1]
+        count += sored[i][1]
+
+    return float(sum_color / count)
+
+
+def get_distribute_(r_, percent):
+    ll = len(r_)
+    base_count = int(ll*percent)
+    distribute = collections.Counter(r_)
+    # show_distribute(r_)
+    sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
+    sum_color = 0
+    count = 0
+    for i in range(len(distribute)):
+        sum_color += sored[i][0] * sored[i][1]
+        count += sored[i][1]
+        if count >= base_count:
+            break
+    # print(float(ll/count))
+    return float(sum_color / count)
+
+
+import matplotlib.pyplot as plt
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
     color = img[mask != 0].mean(axis=0)
 
+    # [no use.. get popular rgb value]
     # tmp = img[mask != 0]
     # r_, g_, b_ = filter_get_popular_rgb(tmp)
-
-    # return color.astype(np.uint8)
-    return color
     # return [r_, g_, b_]
 
+    # kernel filter
+    # roi = img[mask != 0]
+    # roi_img = np.reshape(roi, (41, 41, 3))
+    # mean filter
+    # roi_img_ = cv2.blur(roi_img, (5, 5))
+    # Guassian filter
+    # roi_img_ = cv2.GaussianBlur(roi_img, (3, 3), 0)
+    # medianBlur
+    # roi_img_ = cv2.medianBlur(roi_img, 3)
+    # color = np.reshape(roi_img_, (-1, 3)).mean(axis=0)
+
+    # show rgb distributed
+    # r_, g_, b_ = roi[:, 0].tolist(), roi[:, 1].tolist(), roi[:, 2].tolist()
+    # plt.plot([i for i in range(1681)], r_, color='red')
+    # plt.plot([i for i in range(1681)], g_, color='green')
+    # plt.plot([i for i in range(1681)], b_, color='blue')
+    # plt.show()
+
+
+    # 统计分布然后掐头去尾再做平均
+    tmp = img[mask != 0]
+    # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
+    topk = 6
+    # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
+    # # remove_k = 2
+    filtered_r = get_distribute(tmp[:, 0], topk)
+    filtered_g = get_distribute(tmp[:, 1], topk)
+    filtered_b = get_distribute(tmp[:, 2], topk)
+
+    # 保留超过1/3数量的像素值, 再做平均
+    # part_percent = 1/2
+    # filtered_r = get_distribute_(tmp[:, 0], part_percent)
+    # filtered_g = get_distribute_(tmp[:, 1], part_percent)
+    # filtered_b = get_distribute_(tmp[:, 2], part_percent)
+    # color = [filtered_r, filtered_g, filtered_b]
+
+    # return color.astype(np.uint8)
+    print(color)
+    return color
 
 
 def is_ok(color, color_thresholds):
@@ -171,6 +261,7 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
         [cx + half_width, cy - half_height]
     ], np.int32)
 
+    # get color
     color = cal_color(img, area)
     cv2.drawContours(draw, [area], 0, (0, 0, 255), 2)
     cv2.putText(draw, "color: {}".format(color), (100, 100), cv2.FONT_ITALIC, 3, (0, 255, 255), 2)
@@ -198,9 +289,9 @@ def main(base_index_value):
         for path in paths:
             im_name = int(path.split('\\')[-1][:-4])
             img = imread(path)
+            # print(np.mean(img[:,:,0]), np.mean(img[:,:,1]), np.mean(img[:,:,2]))
             color, string, sig, draw = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
-            print(color)
-            dir_color["{}_{}".format(dir + base_index_value, im_name)] = color.tolist()
+            dir_color["{}_{}".format(dir + base_index_value, im_name)] = color    # .tolist()
     data = json.dumps(dir_color)
     with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'w') as js_file:
         js_file.write(data)
