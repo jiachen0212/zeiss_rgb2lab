@@ -40,7 +40,7 @@ def merge_data():
     assert len(js1_all) == len(js2_all)
 
 
-def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, index, rgb_ImgName):
+def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, index, rgb_ImgName):
     xyz_res = dict()
     single_xyz_res = os.path.join(tmp_dir, 'xyz_{}.json'.format(index))
 
@@ -53,6 +53,28 @@ def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, index, rgb_
     y_pred = xgb_model.predict(X)
     for ii, item in enumerate(y_pred):
         value = ''.join(str(a) for a in X[ii])
+        info = rgb_ImgName[value]
+        xyz_res[info] = str(item)
+
+    data = json.dumps(xyz_res)
+    with open(single_xyz_res, 'w') as js_file:
+        js_file.write(data)
+
+
+
+def cross_val_(tmp_dir, save_params_dir, X_train, y_train, X_test, index, rgb_ImgName):
+    xyz_res = dict()
+    single_xyz_res = os.path.join(tmp_dir, 'xyz_{}.json'.format(index))
+
+    parameters = json.load(open(os.path.join(save_params_dir, 'parameter_green_{}.json'.format(index)), 'r'))
+
+    xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
+    xgb_model.fit(X_train, y_train)
+
+    # test all data
+    y_pred = xgb_model.predict(X_test)
+    for ii, item in enumerate(y_pred):
+        value = ''.join(str(a) for a in X_test[ii])
         info = rgb_ImgName[value]
         xyz_res[info] = str(item)
 
@@ -192,6 +214,35 @@ def load_data(rgb, lab, index, gammaed=False):
     return X, Y, rgb_ImgName, X_dict
 
 
+def generate_test_data(rgb, lab, index, gammaed=False):
+    X_dict = dict()
+    rgb_ImgName = dict()
+    X , Y = [], []
+    for k, v in rgb.items():
+        r_, g_, b_ = [float(a) / 255 for a in v]
+        if not gammaed:
+            X.append([r_, g_, b_])
+            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+            X_dict[k] = [r_, g_, b_]
+        else:
+            gamma_r_ = gamma(r_)
+            gamma_g_ = gamma(g_)
+            gamma_b_ = gamma(b_)
+            X.append([gamma_r_, gamma_g_, gamma_b_])
+            X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
+            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    return X, Y, rgb_ImgName, X_dict
+
+
+
 def xyz2lab(x, y, z):
     x /= 94.81211415
     y /= 100
@@ -234,7 +285,7 @@ def check_lab_res(seed, tmp_dir, js_y, X_dict):
             c += 1
         else:
             line = "data: {}, diff l: {}, diff a: {}, diff b: {}".format(str(int(k.split('_')[0])-50) + '_' + k.split('_')[1], (pre_l-real_l), (pre_a-real_a), (pre_b-real_b))
-            # print(line)
+            print(line)
             # blue_diff.write(line+'\n')
 
         green_bad_a_dict[''.join(str(a)+',' for a in X_dict[k])] = [abs(pre_a-real_a), k]
@@ -260,6 +311,25 @@ def overfiting(X, Y, index, save_params_dir):
     plt.show()
 
 
+def split_0812_green(data1_lab, data1_rgb,  lab0812, rgb0812):
+    # 0812有17条绿膜数据, split train and test train+data1, test做测试数据. 迁移性很差..
+    ks = list(lab0812.keys())
+    tmp1, tmp2 = dict(), dict()
+    for i in range(15):
+        tmp1[ks[i]] = lab0812[ks[i]]
+        tmp2[ks[i]] = rgb0812[ks[i]]
+    data1_lab.update(tmp1)
+    data1_rgb.update(tmp2)
+
+    test_lab, test_rgb = dict(), dict()
+    for i in range(15, len(ks)):
+        test_lab[ks[i]] = lab0812[ks[i]]
+        test_rgb[ks[i]] = rgb0812[ks[i]]
+
+    return data1_lab, data1_rgb, test_lab, test_rgb
+
+
+
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
     # merge data1 and 0924
@@ -270,17 +340,26 @@ if __name__ == "__main__":
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
 
     # data1
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
     # 0924
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+
+
+    # 0812 green data
+    LAB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_lab.json', 'r'))
+    RGB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_rgb.json', 'r'))
+    # LAB, RGB, LAB_, RGB_ = split_0812_green(LAB, RGB, LAB_, RGB_)
+    # assert len(LAB) == 116 + 15
+    # assert len(LAB_) == 2
 
     save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
 
     tmp_dir = r'D:\work\project\卡尔蔡司膜色缺陷\tmp_xyz_res_js'
     X_dict = dict()
+    X_dict_ = dict()
 
     # 交叉验证
     seeds = [11*i for i in range(1, 20)]
@@ -288,15 +367,18 @@ if __name__ == "__main__":
     for seed in seeds:
         for i in range(3):
             X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
+            # X_, Y_, rgb_ImgName_, X_dict_ = generate_test_data(RGB_, LAB_, i, gammaed=True)
             # print(len(rgb_ImgName))
-            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=seed)
             # hyperparameter_searching(X, Y, i, save_params_dir)
             # overfiting(X, Y, i, save_params_dir)
 
-            cross_val(tmp_dir, save_params_dir, X_train, y_train, X, X_test, i, rgb_ImgName)
+            cross_val(tmp_dir, save_params_dir, X_train, y_train, X, i, rgb_ImgName)
+            # cross_val_(tmp_dir, save_params_dir, X_train, y_train, X_, i, rgb_ImgName_)
 
         # compare results
         count = check_lab_res(seed, tmp_dir, LAB, X_dict)
+        # count = check_lab_res(seed, tmp_dir, LAB_, X_dict_)
         res += count
 
     print("交叉验证的acc: {}".format(res/(len(seeds)*len(X_dict))))
