@@ -136,7 +136,7 @@ def cal_color(img, area):
     # plt.show()
 
     # return color.astype(np.uint8)
-    # return color
+    # return color  # 保留float color值
     return [r_, g_, b_]
 
 
