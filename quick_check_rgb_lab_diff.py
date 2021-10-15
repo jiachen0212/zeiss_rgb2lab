@@ -153,6 +153,8 @@ def base_red_blue_compare_green(data_lab, data_rgb, save_dir):
         aa.write(line2 + '\n')
         aa.write('\n')
 
+    return slim_bad_pair
+
 
 def change_dir(k):
     return str(int(k.split('_')[0])-14)+'_'+k.split('_')[1]
@@ -221,6 +223,8 @@ def base_green_red_compare_blue(data_lab, data_rgb, save_dir):
         aa.write(line2 + '\n')
         aa.write('\n')
 
+    return slim_bad_pair
+
 
 
 def base_green_blue_check_red(data_lab, data_rgb, save_dir):
@@ -276,25 +280,39 @@ def base_green_blue_check_red(data_lab, data_rgb, save_dir):
         aa.write(line2 + '\n')
         aa.write('\n')
 
+    return slim_bad_pair
 
 
 if __name__ == "__main__":
-    # 针对蓝膜, 在g值相近的时候, rgb的b值越大则越蓝, 理论上应该对应出lab种的b值越负
-    # 针对绿膜, 在b值相近的时候, rgb的g值越大则越绿, 理论上应该对应出lab种的a值越负
+    # RGB中, RG接近, B越大b越小; GB接近, R越大a越大; RB接近, G越大b越小..
+
+    data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+
     # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
     # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+
     # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_lab.json', 'r'))
     # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_rgb.json', 'r'))
 
     save_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\rgb_lab一致性检查'
 
     # 蓝膜数据
-    data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924blue_lab.json', 'r'))
-    data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924blue_rgb.json', 'r'))
+    # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924blue_lab.json', 'r'))
+    # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924blue_rgb.json', 'r'))
 
     # fun(data1_lab, data1_rgb)
 
-    base_red_blue_compare_green(data1_lab, data1_rgb, save_dir)
-    base_green_red_compare_blue(data1_lab, data1_rgb, save_dir)
-    base_green_blue_check_red(data1_lab, data1_rgb, save_dir)
+    bad_green = base_red_blue_compare_green(data1_lab, data1_rgb, save_dir)
+    bad_blue = base_green_red_compare_blue(data1_lab, data1_rgb, save_dir)
+    bad_red = base_green_blue_check_red(data1_lab, data1_rgb, save_dir)
+
+    all_bad = []
+    for bad_list in [bad_green, bad_blue, bad_red]:
+        for a in bad_list:
+            all_bad.extend(a)
+
+    set_all_bad = list(set(all_bad))
+    print(len(set_all_bad))
+    print(set_all_bad)
 

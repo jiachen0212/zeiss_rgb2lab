@@ -19,10 +19,10 @@ def merge_data():
     js1_all = dict()
     js2_all = dict()
     js1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    js1_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    js1_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_lab_slim.json', 'r'))
 
     js2 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
-    js2_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    js2_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_rgb_slim.json', 'r'))
 
     js1_all.update(js1)
     js1_all.update(js1_1)
@@ -30,11 +30,11 @@ def merge_data():
     js2_all.update(js2_1)
 
     data = json.dumps(js1_all)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'w') as js_file:
+    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_lab.json', 'w') as js_file:
         js_file.write(data)
 
     data = json.dumps(js2_all)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'w') as js_file:
+    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_rgb.json', 'w') as js_file:
         js_file.write(data)
 
     assert len(js1_all) == len(js2_all)
@@ -330,22 +330,42 @@ def split_0812_green(data1_lab, data1_rgb,  lab0812, rgb0812):
 
 
 
+def del_bad_rgb_lab_data(data_rgb, data_lab):
+    tmp = ['25_14', '20_17', '18_7', '24_15', '25_13', '17_14', '24_16', '17_20', '17_3', '17_11', '17_6', '20_18', '17_1', '17_2', '24_10', '18_13', '17_15', '18_11', '17_18', '25_2', '24_1', '18_12', '18_1', '17_19', '17_8', '24_20', '25_4', '24_11', '16_7', '17_13', '17_12', '24_4']
+
+    for k in tmp:
+        del data_rgb[k]
+        del data_lab[k]
+
+    data = json.dumps(data_rgb)
+    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_rgb_slim.json', 'w') as js_file:
+        js_file.write(data)
+
+    data = json.dumps(data_lab)
+    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_lab_slim.json', 'w') as js_file:
+        js_file.write(data)
+
+    return data_rgb, data_lab
+
+
+
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
     # merge data1 and 0924
     merge_data()
 
-    # all data
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924_green_rgb.json', 'r'))
-
-    # data1
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
-
     # 0924
     LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
     RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    # RGB, LAB = del_bad_rgb_lab_data(RGB, LAB)
+
+    # all data
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_lab.json', 'r'))   # data1_0924_green_lab
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_rgb.json', 'r'))
+
+    # data1
+    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
 
     # 0812 green data
