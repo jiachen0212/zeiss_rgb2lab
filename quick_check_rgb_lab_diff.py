@@ -2,6 +2,8 @@
 import json
 import numpy as np
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def fun(data1_lab, data1_rgb):
@@ -283,14 +285,71 @@ def base_green_blue_check_red(data_lab, data_rgb, save_dir):
     return slim_bad_pair
 
 
+
+
+def json2csv(data1_lab, data1_rgb):
+    data1 = pd.DataFrame()
+    ks = []
+    labs = []
+    rgbs = []
+    for k, v in data1_lab.items():
+        ks.append(k)
+        labs.append(v)
+        rgbs.append(data1_rgb[k])
+    # 数据写入csv
+    data1['dir_name'] = ks
+    data1['lab'] = labs
+    data1['rgb'] = rgbs
+    data1.to_csv(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab_rgb.csv', index=False)
+
+
+
+def show_rgb_lab_distracte(data1_lab, data1_rgb):
+    L,A,B = [],[],[]
+    r,g,b = [], [], []
+    for k, v in data1_lab.items():
+        L.append(float(v[0]))
+        A.append(float(v[1]))
+        B.append(float(v[2]))
+        r.append(float(data1_rgb[k][0]))
+        g.append(float(data1_rgb[k][1]))
+        b.append(float(data1_rgb[k][2]))
+
+    plt.hist(x=r, bins='auto', color='red', alpha=0.7, rwidth=0.85, label='r')
+    plt.hist(x=g, bins='auto', color='green', alpha=0.7, rwidth=0.85, label='g')
+    plt.hist(x=b, bins='auto', color='blue', alpha=0.7, rwidth=0.85, label='b')
+    plt.grid(axis='y', alpha=0.75)
+    plt.title('0924data-rgb')
+    plt.legend()
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
+    plt.hist(x=L, bins='auto', color='lightsalmon', alpha=0.7, rwidth=0.85, label='L')
+    plt.hist(x=A, bins='auto', color='pink', alpha=0.7, rwidth=0.85, label='A')
+    plt.hist(x=B, bins='auto', color='darkslateblue', alpha=0.7, rwidth=0.85, label='B')
+    plt.grid(axis='y', alpha=0.75)
+    plt.title('data1-LAB')
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.legend()
+    plt.show()
+
+
+
+
+
 if __name__ == "__main__":
+
+    # json2csv(data1_lab, data1_rgb)
+
     # RGB中, RG接近, B越大b越小; GB接近, R越大a越大; RB接近, G越大b越小..
 
-    data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+    # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
+    # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
-    # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
     # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_lab.json', 'r'))
     # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_rgb.json', 'r'))
@@ -313,6 +372,14 @@ if __name__ == "__main__":
             all_bad.extend(a)
 
     set_all_bad = list(set(all_bad))
-    print(len(set_all_bad))
-    print(set_all_bad)
+    # print(len(set_all_bad))
+    # print(set_all_bad)
+
+    show_rgb_lab_distracte(data1_lab, data1_rgb)
+
+
+
+
+
+
 
