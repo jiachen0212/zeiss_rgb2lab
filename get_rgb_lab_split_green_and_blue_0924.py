@@ -228,7 +228,7 @@ def cal_color(img, area):
     # filtered_r = get_distribute_(tmp[:, 0], part_percent)
     # filtered_g = get_distribute_(tmp[:, 1], part_percent)
     # filtered_b = get_distribute_(tmp[:, 2], part_percent)
-    color = [filtered_r, filtered_g, filtered_b]
+    # color = [filtered_r, filtered_g, filtered_b]
 
     # return color.astype(np.uint8)
     print(color)
@@ -293,7 +293,7 @@ def main(base_index_value):
             img = imread(path)
             # print(np.mean(img[:,:,0]), np.mean(img[:,:,1]), np.mean(img[:,:,2]))
             color, string, sig, draw = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
-            dir_color["{}_{}".format(dir + base_index_value, im_name)] = color    # .tolist()
+            dir_color["{}_{}".format(dir + base_index_value, im_name)] = color.tolist()
     data = json.dumps(dir_color)
     with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'w') as js_file:
         js_file.write(data)

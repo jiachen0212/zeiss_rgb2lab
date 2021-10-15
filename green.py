@@ -344,13 +344,13 @@ if __name__ == "__main__":
     RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
 
     # 0924
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
 
 
     # 0812 green data
-    LAB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_lab.json', 'r'))
-    RGB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_rgb.json', 'r'))
+    # LAB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_lab.json', 'r'))
+    # RGB_ = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812green_rgb.json', 'r'))
     # LAB, RGB, LAB_, RGB_ = split_0812_green(LAB, RGB, LAB_, RGB_)
     # assert len(LAB) == 116 + 15
     # assert len(LAB_) == 2
@@ -369,7 +369,7 @@ if __name__ == "__main__":
             X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True)
             # X_, Y_, rgb_ImgName_, X_dict_ = generate_test_data(RGB_, LAB_, i, gammaed=True)
             # print(len(rgb_ImgName))
-            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.3, random_state=seed)
+            X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
             # hyperparameter_searching(X, Y, i, save_params_dir)
             # overfiting(X, Y, i, save_params_dir)
 
