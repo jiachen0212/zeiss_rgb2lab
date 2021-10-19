@@ -228,10 +228,10 @@ def cal_color(img, area):
     # filtered_r = get_distribute_(tmp[:, 0], part_percent)
     # filtered_g = get_distribute_(tmp[:, 1], part_percent)
     # filtered_b = get_distribute_(tmp[:, 2], part_percent)
-    # color = [filtered_r, filtered_g, filtered_b]
 
+    color = [filtered_r, filtered_g, filtered_b]
     # return color.astype(np.uint8)
-    print(color)
+    print("color: {}".format(color))
     return color
 
 
@@ -254,6 +254,7 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
     moments = cv2.moments(areas[0])
     cx = moments["m10"] / moments["m00"]
     cy = moments["m01"] / moments["m00"]
+    print("rio中心点坐标: ({}, {})".format(cx, cy))
     half_height = 20
     half_width = 20
     area = np.array([
@@ -279,7 +280,9 @@ def main(base_index_value):
     dir_color = dict()
     dirs = [i for i in range(1, 20)]
     for dir in dirs:
-        directory = r"D:\work\project\卡尔蔡司膜色缺陷\莫宇哥_config\莫宇哥20210924_data_and_config\20210924\{}".format(dir)
+        print('-------------------- {} --------------------'.format(dir))
+        # directory = r"D:\work\project\卡尔蔡司膜色缺陷\莫宇哥_config\莫宇哥20210924_data_and_config\20210924\{}".format(dir)
+        directory = r'C:\Users\15974\Desktop\蔡司-膜色\蔡司-膜色\{}'.format(dir)
         paths = glob.glob(os.path.join(directory, "*.bmp"))
         config_file = os.path.join(directory, "config.json")
         with open(config_file) as f:
@@ -289,14 +292,14 @@ def main(base_index_value):
             area_threshold = conf.get("area_threshold")
             color_thresholds = tuple(conf.get("color_thresholds"))
         for path in paths:
-            im_name = int(path.split('\\')[-1][:-4])
+            # im_name = int(path.split('\\')[-1][:-4])
             img = imread(path)
             # print(np.mean(img[:,:,0]), np.mean(img[:,:,1]), np.mean(img[:,:,2]))
             color, string, sig, draw = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
-            dir_color["{}_{}".format(dir + base_index_value, im_name)] = color.tolist()
-    data = json.dumps(dir_color)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'w') as js_file:
-        js_file.write(data)
+    #         dir_color["{}_{}".format(dir + base_index_value, im_name)] = color.tolist()
+    # data = json.dumps(dir_color)
+    # with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924rgb.json', 'w') as js_file:
+    #     js_file.write(data)
 
     blue = []
     green = []
@@ -401,8 +404,9 @@ def split_blue_and_green(blue_dir_name, green_dir_name):
 if __name__ == '__main__':
     base_index_value = 14
     blue_dir_name, green_dir_name = main(base_index_value)
-    base_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\0924'
-    # 生成所有文件夹的lab值json
-    generate_y(base_dir, base_index_value)
-    # 根据 blue_dir_name, green_dir_name 区分蓝绿数据
-    split_blue_and_green(blue_dir_name, green_dir_name)
+
+    # base_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\0924'
+    # # 生成所有文件夹的lab值json
+    # generate_y(base_dir, base_index_value)
+    # # 根据 blue_dir_name, green_dir_name 区分蓝绿数据
+    # split_blue_and_green(blue_dir_name, green_dir_name)
