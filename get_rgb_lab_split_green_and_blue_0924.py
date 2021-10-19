@@ -184,6 +184,20 @@ def get_distribute_(r_, percent):
     return float(sum_color / count)
 
 
+
+def slim_roi_rgb_distracte(img, mask):
+    # 统计分布然后掐头去尾再做平均
+    tmp = img[mask != 0]
+    # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
+    topk = 6
+    # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
+    # # remove_k = 2
+    filtered_r = get_distribute(tmp[:, 0], topk)
+    filtered_g = get_distribute(tmp[:, 1], topk)
+    filtered_b = get_distribute(tmp[:, 2], topk)
+
+    return [filtered_r, filtered_g, filtered_b]
+
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
@@ -212,16 +226,7 @@ def cal_color(img, area):
     # plt.plot([i for i in range(1681)], b_, color='blue')
     # plt.show()
 
-
-    # 统计分布然后掐头去尾再做平均
-    tmp = img[mask != 0]
-    # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
-    topk = 6
-    # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
-    # # remove_k = 2
-    filtered_r = get_distribute(tmp[:, 0], topk)
-    filtered_g = get_distribute(tmp[:, 1], topk)
-    filtered_b = get_distribute(tmp[:, 2], topk)
+    color = slim_roi_rgb_distracte(img, mask)
 
     # 保留超过1/3数量的像素值, 再做平均
     # part_percent = 1/2
@@ -229,7 +234,6 @@ def cal_color(img, area):
     # filtered_g = get_distribute_(tmp[:, 1], part_percent)
     # filtered_b = get_distribute_(tmp[:, 2], part_percent)
 
-    color = [filtered_r, filtered_g, filtered_b]
     # return color.astype(np.uint8)
     print("color: {}".format(color))
     return color
@@ -282,7 +286,7 @@ def main(base_index_value):
     for dir in dirs:
         print('-------------------- {} --------------------'.format(dir))
         # directory = r"D:\work\project\卡尔蔡司膜色缺陷\莫宇哥_config\莫宇哥20210924_data_and_config\20210924\{}".format(dir)
-        directory = r'C:\Users\15974\Desktop\蔡司-膜色\蔡司-膜色\{}'.format(dir)
+        directory = r'C:\Users\15974\Desktop\蔡司镜片膜色\蔡司镜片膜色\不更改背景-靠角落\{}'.format(dir)
         paths = glob.glob(os.path.join(directory, "*.bmp"))
         config_file = os.path.join(directory, "config.json")
         with open(config_file) as f:

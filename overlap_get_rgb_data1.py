@@ -50,20 +50,14 @@ def find_areas(img, color_lower, color_upper, area_threshold):
     return areas
 
 
-import matplotlib.pyplot as plt
-def cal_color(img, area):
-    mask = np.zeros(img.shape[:2], np.uint8)
-    # area.shape: (573, 1, 2)
-
-    cv2.drawContours(mask, [area], 0, 1, -1)
-    # 这里直接取了区域内的颜色均值..
-    color = img[mask != 0].mean(axis=0)
+def slim_roi(area, img):
+    # 基于选中的蓝色roi, 选择roi的相对中心的小框  [实验下来, 貌似效果不如取全部roi的均值]
     area = area.squeeze(axis=1)
     xs, ys = [], []
     for tt in area:
         xs.append(tt[0])
         ys.append(tt[1])
-    x_min, x_max, y_min, y_max = int((min(xs)+max(xs))/2) - 20, int((min(xs)+max(xs))/2) + 20, int((min(ys) + max(ys))/2) - 20, int((min(ys) + max(ys))/2) + 20
+    x_min, x_max, y_min, y_max = int((min(xs)+max(xs))/2) - 50, int((min(xs)+max(xs))/2) + 50, int((min(ys) + max(ys))/2) - 50, int((min(ys) + max(ys))/2) + 50
     p1, p2, p3, p4 = [x_max, y_min], [x_max, y_max], [x_min, y_max], [x_min, y_min]
     mask1 = np.zeros((img.shape), dtype=np.uint8)
     pts = np.array([[p1, p2, p3, p4]], dtype=np.int32)
@@ -74,17 +68,67 @@ def cal_color(img, area):
     cv2.imwrite('./diamond_mask.png', img)
     print("values: {}".format(values))
 
+    return values
 
+
+
+def show_area(mask):
     # mask!=0的所有pixel会被提取. 不是规整的矩形区域..
-    # points = []
-    # for i in range(mask.shape[0]):
-    #     for j in range(mask.shape[1]):
-    #         if mask[i][j] != 0:
-    #             points.append([i, j])
-    # for point in points[:500]:
-    #     plt.scatter(point[0], point[1], marker = 'x',color = 'red', s = 40 ,label = 'First')
-    # plt.show()
+    points = []
+    for i in range(mask.shape[0]):
+        for j in range(mask.shape[1]):
+            if mask[i][j] != 0:
+                points.append([i, j])
+    for point in points[:500]:
+        plt.scatter(point[0], point[1], marker = 'x',color = 'red', s = 40 ,label = 'First')
+    plt.show()
 
+
+import collections
+def get_distribute(r_, topk):
+    distribute = collections.Counter(r_)
+    # 防止设置的topk超过分布数目
+    topk = min(topk, len(distribute))
+    # show_distribute(r_)
+    sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
+    sum_color = 0
+    count = 0
+    for i in range(topk):
+        sum_color += sored[i][0] * sored[i][1]
+        count += sored[i][1]
+
+    return float(sum_color / count)
+
+
+def slim_roi_rgb_distracte(img, mask):
+    tmp = img[mask != 0]
+    # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
+    topk = 6
+    # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
+    # # remove_k = 2
+    filtered_r = get_distribute(tmp[:, 0], topk)
+    filtered_g = get_distribute(tmp[:, 1], topk)
+    filtered_b = get_distribute(tmp[:, 2], topk)
+
+    return [filtered_r, filtered_g, filtered_b]
+
+
+
+import matplotlib.pyplot as plt
+def cal_color(img, area):
+    mask = np.zeros(img.shape[:2], np.uint8)
+    # area.shape: (573, 1, 2)
+
+    cv2.drawContours(mask, [area], 0, 1, -1)
+    # 这里直接取了区域内的颜色均值..
+    color = img[mask != 0].mean(axis=0)
+
+    # values = slim_roi(area, img)
+
+    # 精简roi的分布, 保留中心分布像素值们的均值
+    # color = slim_roi_rgb_distracte(img, mask)
+
+    print("color: {}".format(color))
     # return color.astype(np.uint8)
     return color
 
@@ -118,8 +162,13 @@ def main(single_dir_col, dir_index, path):
         rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])  # 用户画的框
 
         color_lower, color_upper = cal_color_range(img, rect)  # 根据用户画的框计算出颜色上下界，用于后续区域分割
-        color_lower = (0, 120, 0)
-        color_upper = (200, 200, 200)
+        # color_lower = (0, 120, 0)
+        # color_upper = (200, 200, 200)
+
+        # 1019
+        color_lower = (20, 45, 40)
+        color_upper = (40, 75, 70)
+
         area_threshold = 1000  # 用户设定的面积阈值
         color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
 
@@ -136,7 +185,7 @@ if __name__ == '__main__':
     dir_n = 6
     save_json_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data'
     # base_dir = r"D:\work\project\卡尔蔡司膜色缺陷\data\data1"
-    base_dir = r'C:\Users\15974\Desktop\蔡司-膜色1'
+    base_dir = r'C:\Users\15974\Desktop\蔡司镜片膜色\蔡司镜片膜色\不更改背景-靠角落'
     all_col3 = dict()
     for i in range(1, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
