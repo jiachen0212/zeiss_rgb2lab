@@ -152,11 +152,12 @@ def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
     return color
 
 
-def main(single_dir_col, dir_index, path):
+def main(single_dir_col, dir_index, path, ff):
     import glob
     paths = glob.glob(os.path.join(path, r"*.bmp").format(path))
     for ind, path in enumerate(paths):
         print(path)
+        ff.write(path+'\n')
         # im_name = int(path.split('\\')[-1][:-4])
         img = imread(path)
         rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])  # 用户画的框
@@ -166,14 +167,20 @@ def main(single_dir_col, dir_index, path):
         # color_upper = (200, 200, 200)
 
         # 1019
+        # dir1
         color_lower = (20, 45, 40)
         color_upper = (40, 75, 70)
+        # dir2 dir3
+        # color_lower = (30, 110, 80)
+        # color_upper = (70, 160, 140)
 
         area_threshold = 1000  # 用户设定的面积阈值
         color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
-
         color = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
+        ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
+
         # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
+    ff.write('\n\n')
 
 
 if __name__ == '__main__':
@@ -187,9 +194,10 @@ if __name__ == '__main__':
     # base_dir = r"D:\work\project\卡尔蔡司膜色缺陷\data\data1"
     base_dir = r'C:\Users\15974\Desktop\蔡司镜片膜色\蔡司镜片膜色\不更改背景-靠角落'
     all_col3 = dict()
+    ff = open(r'./Get_RGB_Value.txt', 'a')
     for i in range(1, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
-        main(all_col3, i, dir_path)
+        main(all_col3, i, dir_path, ff)
     # data = json.dumps(all_col3)
     # with open(os.path.join(save_json_dir, 'data1_rgb.json'), 'w') as js_file:
     #     js_file.write(data)

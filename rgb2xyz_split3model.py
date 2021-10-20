@@ -262,7 +262,6 @@ def load_data(json_x, json_y, index, green_blue, gammaed=False):
     print(len(rgb_ImgName))
     print(len(X_dict))
 
-
     # show_rgb_gamma(org_rgb, gammed_rgb, green_blue)
 
     return X, Y, rgb_ImgName, X_dict
