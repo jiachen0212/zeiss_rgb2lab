@@ -1,4 +1,10 @@
 # coding=utf-8
+'''
+1.质心法 x+-20 y+-20
+2. 早期非质心法
+generate data: rgb and lab
+
+'''
 import glob
 import os
 import cv2
@@ -409,8 +415,8 @@ if __name__ == '__main__':
     base_index_value = 14
     blue_dir_name, green_dir_name = main(base_index_value)
 
-    # base_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\0924'
-    # # 生成所有文件夹的lab值json
-    # generate_y(base_dir, base_index_value)
-    # # 根据 blue_dir_name, green_dir_name 区分蓝绿数据
-    # split_blue_and_green(blue_dir_name, green_dir_name)
+    base_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\0924'
+    # 生成所有文件夹的lab值json
+    generate_y(base_dir, base_index_value)
+    # 根据 blue_dir_name, green_dir_name 区分蓝绿数据
+    split_blue_and_green(blue_dir_name, green_dir_name)
