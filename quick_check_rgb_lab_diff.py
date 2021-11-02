@@ -1,4 +1,8 @@
 # coding=utf-8
+'''
+rgb lab 一致性检查.. data正确性快速验证
+
+'''
 import json
 import numpy as np
 import os

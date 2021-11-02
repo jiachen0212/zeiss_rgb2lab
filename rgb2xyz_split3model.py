@@ -1,7 +1,6 @@
 # coding=utf-8
 '''
 rgb2xyz, 拆分成3个model, 分别完成: rgb2x rgb2y rgb2z
-xgboost
 
 '''
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
@@ -176,7 +175,6 @@ def show_rgb_gamma(org_rgb, gammed_rgb, green_blue):
             plt.plot(aa, gammed_rgb[ii], color='cornflowerblue')
     plt.legend()
     plt.show()
-
 
 
 def show_b_gamma(org):
@@ -398,8 +396,6 @@ def overfiting(X, Y, index, green_blue):
     plt.show()
 
 
-
-
 def inference():
     # inference
     X, Y = eval_other_thickness()
@@ -441,6 +437,5 @@ if __name__ == "__main__":
 
     # compare result
     check_lab_res(green_blue, js_x, js_y, ff, X_dict)
-
 
     # inference()

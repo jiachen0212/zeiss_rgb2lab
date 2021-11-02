@@ -103,7 +103,7 @@ def get_distribute(r_, topk):
 def slim_roi_rgb_distracte(img, mask):
     tmp = img[mask != 0]
     # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
-    topk = 6
+    topk = 5
     # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
     # # remove_k = 2
     filtered_r = get_distribute(tmp[:, 0], topk)
@@ -113,13 +113,14 @@ def slim_roi_rgb_distracte(img, mask):
     return [filtered_r, filtered_g, filtered_b]
 
 
-
 import matplotlib.pyplot as plt
 def cal_color(img, area):
     mask = np.zeros(img.shape[:2], np.uint8)
     # area.shape: (573, 1, 2)
-
+    img_copy = img.copy
     cv2.drawContours(mask, [area], 0, 1, -1)
+    cv2.drawContours(img,[area],-1,(0,255,0),5)
+    cv2.imwrite(r'./1.png', img)
     # 这里直接取了区域内的颜色均值..
     color = img[mask != 0].mean(axis=0)
 
@@ -140,7 +141,7 @@ def is_ok(color, color_thresholds):
     return r1 <= r <= r2 and g1 <= g <= g2 and b1 <= b <= b2
 
 
-def pipeline(img, color_lower, color_upper, area_threshold, color_thresholds):
+def pipeline(img, color_lower, color_upper, area_threshold):
     areas = find_areas(img, color_lower, color_upper, area_threshold)
     if len(areas) == 0:  # 没找到满足条件的area，返回1
         return None, None, 1, None
@@ -160,23 +161,23 @@ def main(single_dir_col, dir_index, path, ff):
         ff.write(path+'\n')
         # im_name = int(path.split('\\')[-1][:-4])
         img = imread(path)
-        rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])  # 用户画的框
+        rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])   
 
-        color_lower, color_upper = cal_color_range(img, rect)  # 根据用户画的框计算出颜色上下界，用于后续区域分割
+        color_lower, color_upper = cal_color_range(img, rect)   
         # color_lower = (0, 120, 0)
         # color_upper = (200, 200, 200)
 
         # 1019
         # dir1
-        color_lower = (20, 45, 40)
-        color_upper = (40, 75, 70)
+        # color_lower = (20, 45, 40)
+        # color_upper = (40, 75, 70)
         # dir2 dir3
-        # color_lower = (30, 110, 80)
-        # color_upper = (70, 160, 140)
+        color_lower = (30, 110, 80)
+        color_upper = (70, 160, 140)
 
-        area_threshold = 1000  # 用户设定的面积阈值
-        color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
-        color = pipeline(img, color_lower, color_upper, area_threshold, color_thresholds)
+        area_threshold = 1000
+        # color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
+        color = pipeline(img, color_lower, color_upper, area_threshold)
         ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
 
         # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
@@ -184,18 +185,13 @@ def main(single_dir_col, dir_index, path, ff):
 
 
 if __name__ == '__main__':
-    '''
-    key的顺序: 1-6 
-    1013 used..
-    
-    '''
-    dir_n = 6
+
+    dir_n = 5
     save_json_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data'
-    # base_dir = r"D:\work\project\卡尔蔡司膜色缺陷\data\data1"
-    base_dir = r'C:\Users\15974\Desktop\蔡司镜片膜色\蔡司镜片膜色\不更改背景-靠角落'
+    base_dir = r'C:\Users\15974\Desktop\20211101新镜片\20211101新镜片'
     all_col3 = dict()
     ff = open(r'./Get_RGB_Value.txt', 'a')
-    for i in range(1, dir_n+1):
+    for i in range(5, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
         main(all_col3, i, dir_path, ff)
     # data = json.dumps(all_col3)
