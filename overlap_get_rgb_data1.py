@@ -103,7 +103,7 @@ def get_distribute(r_, topk):
 def slim_roi_rgb_distracte(img, mask):
     tmp = img[mask != 0]
     # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
-    topk = 5
+    topk = 6
     # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
     # # remove_k = 2
     filtered_r = get_distribute(tmp[:, 0], topk)
@@ -114,22 +114,27 @@ def slim_roi_rgb_distracte(img, mask):
 
 
 import matplotlib.pyplot as plt
-def cal_color(img, area):
+def cal_color(img, area, im_name):
     mask = np.zeros(img.shape[:2], np.uint8)
-    # area.shape: (573, 1, 2)
-    img_copy = img.copy
     cv2.drawContours(mask, [area], 0, 1, -1)
-    cv2.drawContours(img,[area],-1,(0,255,0),5)
-    cv2.imwrite(r'./1.png', img)
-    # 这里直接取了区域内的颜色均值..
+
+    # print(img[mask != 0].shape)
+
+    # mask区域向内缩180个像素
+    mask = cv2.erode(mask, np.ones((180, 180), np.uint8))
+
+    # print(img[mask != 0].shape)
+    # tmp = np.nonzero(mask)
+    # top_left, bottom_right = [min(tmp[0]), min(tmp[1])], [max(tmp[0]), max(tmp[1])]
+    # cv2.rectangle(img, top_left, bottom_right, (255, 0, 0))
+    # cv2.imwrite('{}.png'.format(im_name), img)
+    
     color = img[mask != 0].mean(axis=0)
 
-    # values = slim_roi(area, img)
+    # color = slim_roi(area, img)
 
     # 精简roi的分布, 保留中心分布像素值们的均值
     # color = slim_roi_rgb_distracte(img, mask)
-
-    print("color: {}".format(color))
     # return color.astype(np.uint8)
     return color
 
@@ -141,63 +146,87 @@ def is_ok(color, color_thresholds):
     return r1 <= r <= r2 and g1 <= g <= g2 and b1 <= b <= b2
 
 
-def pipeline(img, color_lower, color_upper, area_threshold):
+def pipeline(img, color_lower, color_upper, area_threshold, flag, im_name):
     areas = find_areas(img, color_lower, color_upper, area_threshold)
     if len(areas) == 0:  # 没找到满足条件的area，返回1
         return None, None, 1, None
     if len(areas) > 1:  # 找到多个满足条件的area，返回2
         return None, None, 2, None
 
-    color = cal_color(img, areas[0])
-    # print("overlap color: {}".format(color))
+    # 1102
+    # #1. 非质心法
+    if not flag:
+        color = cal_color(img, areas[0], im_name)
+    else:
+        # 2. 质心法
+        moments = cv2.moments(areas[0])
+        cx = moments["m10"] / moments["m00"]
+        cy = moments["m01"] / moments["m00"]
+        # print("rio中心点坐标: ({}, {})".format(cx, cy))
+        half_height = 88
+        half_width = 88
+        area = np.array([
+            [cx - half_width, cy - half_height],
+            [cx - half_width, cy + half_height],
+            [cx + half_width, cy + half_height],
+            [cx + half_width, cy - half_height]
+        ], np.int32)
+        # cv2.rectangle(img, area[0], area[2], (255, 0, 0))
+        # cv2.imwrite('./{}.png'.format(im_name), img)
+        color = cal_color(img, area, im_name)
+
     return color
 
 
-def main(single_dir_col, dir_index, path, ff):
+def main(single_dir_col, dir_index, path, ff, area_thresholds, flag):
     import glob
     paths = glob.glob(os.path.join(path, r"*.bmp").format(path))
-    for ind, path in enumerate(paths):
-        print(path)
-        ff.write(path+'\n')
-        # im_name = int(path.split('\\')[-1][:-4])
-        img = imread(path)
-        rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])   
+    for area_threshold in area_thresholds:
+        print("area_threshold : {}".format(area_threshold))
+        for ind, path in enumerate(paths):
+            print(path)
+            ff.write(path+'\n')
+            im_name = int(path.split('\\')[-1][:-4])
+            img = imread(path)
+            rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])   
 
-        color_lower, color_upper = cal_color_range(img, rect)   
-        # color_lower = (0, 120, 0)
-        # color_upper = (200, 200, 200)
+            color_lower, color_upper = cal_color_range(img, rect)   
+            # color_lower = (0, 120, 0)
+            # color_upper = (200, 200, 200)
 
-        # 1019
-        # dir1
-        # color_lower = (20, 45, 40)
-        # color_upper = (40, 75, 70)
-        # dir2 dir3
-        color_lower = (30, 110, 80)
-        color_upper = (70, 160, 140)
+            # 1019
+            # dir1
+            # color_lower = (20, 45, 40)
+            # color_upper = (40, 75, 70)
+            # dir2 dir3
+            color_lower = (30, 110, 80)
+            color_upper = (70, 160, 140)
 
-        area_threshold = 1000
-        # color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
-        color = pipeline(img, color_lower, color_upper, area_threshold)
-        ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
+            # area_threshold = 1000
+            # color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
+            color = pipeline(img, color_lower, color_upper, area_threshold, flag, im_name)
+            print(color)
+            ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
 
-        # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
-    ff.write('\n\n')
+            # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
+        ff.write('\n\n')
 
 
 if __name__ == '__main__':
 
-    dir_n = 5
+    dir_n = 3
     save_json_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data'
-    base_dir = r'C:\Users\15974\Desktop\20211101新镜片\20211101新镜片'
+    base_dir = r'C:\Users\15974\Desktop\20211102新镜片\20211102新镜片'
+    # area_thresholds = [1000, 2500, 1500, 2000, 3000, 3500, 10000, 15000, 20000, 25000, 30000]
+    area_thresholds = [60000]
+    flag = 0
+
     all_col3 = dict()
     ff = open(r'./Get_RGB_Value.txt', 'a')
-    for i in range(5, dir_n+1):
+    for i in range(3, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
-        main(all_col3, i, dir_path, ff)
+        main(all_col3, i, dir_path, ff, area_thresholds, flag)
     # data = json.dumps(all_col3)
     # with open(os.path.join(save_json_dir, 'data1_rgb.json'), 'w') as js_file:
     #     js_file.write(data)
-
-
-
 
