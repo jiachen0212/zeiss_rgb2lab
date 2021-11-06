@@ -114,14 +114,14 @@ def slim_roi_rgb_distracte(img, mask):
 
 
 import matplotlib.pyplot as plt
-def cal_color(img, area, im_name):
+def cal_color(img, area, im_name, erode_threshold=None):
     mask = np.zeros(img.shape[:2], np.uint8)
     cv2.drawContours(mask, [area], 0, 1, -1)
 
     # print(img[mask != 0].shape)
 
-    # mask区域向内缩180个像素
-    mask = cv2.erode(mask, np.ones((180, 180), np.uint8))
+    # mask区域向内缩erode_threshold个像素
+    mask = cv2.erode(mask, np.ones((erode_threshold, erode_threshold), np.uint8))
 
     # print(img[mask != 0].shape)
     # tmp = np.nonzero(mask)
@@ -146,7 +146,7 @@ def is_ok(color, color_thresholds):
     return r1 <= r <= r2 and g1 <= g <= g2 and b1 <= b <= b2
 
 
-def pipeline(img, color_lower, color_upper, area_threshold, flag, im_name):
+def pipeline(img, color_lower, color_upper, area_threshold, flag, im_name, erode_threshold=None):
     areas = find_areas(img, color_lower, color_upper, area_threshold)
     if len(areas) == 0:  # 没找到满足条件的area，返回1
         return None, None, 1, None
@@ -156,7 +156,7 @@ def pipeline(img, color_lower, color_upper, area_threshold, flag, im_name):
     # 1102
     # #1. 非质心法
     if not flag:
-        color = cal_color(img, areas[0], im_name)
+        color = cal_color(img, areas[0], im_name, erode_threshold=erode_threshold)
     else:
         # 2. 质心法
         moments = cv2.moments(areas[0])
@@ -173,60 +173,58 @@ def pipeline(img, color_lower, color_upper, area_threshold, flag, im_name):
         ], np.int32)
         # cv2.rectangle(img, area[0], area[2], (255, 0, 0))
         # cv2.imwrite('./{}.png'.format(im_name), img)
-        color = cal_color(img, area, im_name)
+        color = cal_color(img, area, im_name, erode_threshold=erode_threshold)
 
     return color
 
 
-def main(single_dir_col, dir_index, path, ff, area_thresholds, flag):
+def main(single_dir_col, dir_index, path, ff, flag, config_path):
     import glob
     paths = glob.glob(os.path.join(path, r"*.bmp").format(path))
-    for area_threshold in area_thresholds:
-        print("area_threshold : {}".format(area_threshold))
-        for ind, path in enumerate(paths):
-            print(path)
-            ff.write(path+'\n')
-            im_name = int(path.split('\\')[-1][:-4])
-            img = imread(path)
-            rect = np.array([[1180, 1100], [1230, 1100], [1230, 1150], [1180, 1150]])   
+    for ind, path in enumerate(paths):
+        print(path)
+        ff.write(path+'\n')
+        # im_name = int(path.split('\\')[-1][:-4])
+        img = imread(path)
 
-            color_lower, color_upper = cal_color_range(img, rect)   
-            # color_lower = (0, 120, 0)
-            # color_upper = (200, 200, 200)
+        # 1019
+        # dir1
+        # color_lower = (20, 45, 40)
+        # color_upper = (40, 75, 70)
+        # dir2 dir3
 
-            # 1019
-            # dir1
-            # color_lower = (20, 45, 40)
-            # color_upper = (40, 75, 70)
-            # dir2 dir3
-            color_lower = (30, 110, 80)
-            color_upper = (70, 160, 140)
+        with open(config_path) as f:
+            conf = json.load(f)
+            color_lower = tuple(conf.get("color_range")[0])
+            color_upper = tuple(conf.get("color_range")[1])
+            area_threshold = conf.get("area_threshold") + 13000
+            erode_threshold = conf.get("erode_threshold")
+            # print(color_lower, color_upper, area_threshold)
 
-            # area_threshold = 1000
-            # color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
-            color = pipeline(img, color_lower, color_upper, area_threshold, flag, im_name)
-            print(color)
-            ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
+        # area_threshold = 1000
+        # color_thresholds = ((0, 0, 0), (255, 255, 255))  # 用户设定的颜色阈值, 用于ok/ng
+        im_name = ''
+        color = pipeline(img, color_lower, color_upper, area_threshold, flag, im_name, erode_threshold=erode_threshold)
+        print(color)
+        ff.write("color: " + ''.join(str(a)+',   ' for a in color) + '\n')
 
-            # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
-        ff.write('\n\n')
+        # single_dir_col["{}_{}".format(dir_index, im_name)] = [str(a) for a in color]
+    ff.write('\n\n')
 
 
 if __name__ == '__main__':
 
-    dir_n = 3
+    dir_n = 5
     save_json_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data'
-    base_dir = r'C:\Users\15974\Desktop\20211102新镜片\20211102新镜片'
-    # area_thresholds = [1000, 2500, 1500, 2000, 3000, 3500, 10000, 15000, 20000, 25000, 30000]
-    area_thresholds = [60000]
+    base_dir = r'C:\Users\15974\Desktop\20211105新镜片\20211105新镜片'
+    config_path = r'D:\work\project\卡尔蔡司膜色缺陷\1106_config_path\{}.config'.format(dir_n)
     flag = 0
 
     all_col3 = dict()
     ff = open(r'./Get_RGB_Value.txt', 'a')
-    for i in range(3, dir_n+1):
+    for i in range(dir_n, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
-        main(all_col3, i, dir_path, ff, area_thresholds, flag)
+        main(all_col3, i, dir_path, ff, flag, config_path)
     # data = json.dumps(all_col3)
     # with open(os.path.join(save_json_dir, 'data1_rgb.json'), 'w') as js_file:
     #     js_file.write(data)
-
