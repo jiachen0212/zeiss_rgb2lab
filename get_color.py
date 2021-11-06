@@ -97,7 +97,7 @@ def train(conf_path):
     total_img[:, :img.shape[1] // 4] = cv2.resize(img, (img.shape[1] // 4, img.shape[0] // 4))
 
     cv2.namedWindow('image_win')
-    # 手动调整阈值, 然后小白级别得到config..  算法工具化, 便于使用
+    # 手动调整阈值, 然后小白级别得到config..  算法工具化
     cv2.createTrackbar(name11, 'image_win', 0, 255, update)
     cv2.createTrackbar(name12, 'image_win', 0, 255, update)
     cv2.createTrackbar(name21, 'image_win', 0, 255, update)

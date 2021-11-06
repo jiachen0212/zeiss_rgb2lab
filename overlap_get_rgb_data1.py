@@ -225,6 +225,4 @@ if __name__ == '__main__':
     for i in range(dir_n, dir_n+1):
         dir_path = os.path.join(base_dir, str(i))
         main(all_col3, i, dir_path, ff, flag, config_path)
-    # data = json.dumps(all_col3)
-    # with open(os.path.join(save_json_dir, 'data1_rgb.json'), 'w') as js_file:
-    #     js_file.write(data)
+
