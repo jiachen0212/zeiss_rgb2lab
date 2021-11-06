@@ -1,0 +1,3 @@
+# 运行 get_colorpy
+python get_color.py rgb train "C:\Users\15974\Desktop\20211105新镜片\20211105新镜片\2\1.bmp" "D:\work\project\卡尔蔡司膜色缺陷\1106_config_path\2.config"
+每一个文件夹下可以测试一张1.bmp, 然后手动调整Trackbar, 把config落盘下来. 然后就可以提取这个文件夹下的imgs的颜色了, 把config里的参数填上, 再自己微调下就好了~
