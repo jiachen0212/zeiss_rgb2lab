@@ -18,11 +18,11 @@ import os
 def merge_data():
     js1_all = dict()
     js2_all = dict()
-    js1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    js1_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_lab_slim.json', 'r'))
+    js1 = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/data1_lab.json', 'r'))
+    js1_1 = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/0924_green_lab_slim.json', 'r'))
 
-    js2 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
-    js2_1 = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924_green_rgb_slim.json', 'r'))
+    js2 = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/data1_rgb.json', 'r'))
+    js2_1 = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/0924_green_rgb_slim.json', 'r'))
 
     js1_all.update(js1)
     js1_all.update(js1_1)
@@ -30,11 +30,11 @@ def merge_data():
     js2_all.update(js2_1)
 
     data = json.dumps(js1_all)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_lab.json', 'w') as js_file:
+    with open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/data1_0924slim_green_lab.json', 'w') as js_file:
         js_file.write(data)
 
     data = json.dumps(js2_all)
-    with open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_rgb.json', 'w') as js_file:
+    with open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/data1_0924slim_green_rgb.json', 'w') as js_file:
         js_file.write(data)
 
     assert len(js1_all) == len(js2_all)
@@ -355,8 +355,8 @@ if __name__ == "__main__":
     merge_data()
 
     # 0924
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
+    # LAB = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/0924green_lab.json', 'r'))
+    # RGB = json.load(open(r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/shanghai_data/膜色缺陷/data/0924green_rgb.json', 'r'))
     # RGB, LAB = del_bad_rgb_lab_data(RGB, LAB)
 
     # all data
@@ -364,8 +364,8 @@ if __name__ == "__main__":
     # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_0924slim_green_rgb.json', 'r'))
 
     # data1
-    # LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    # RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
+    LAB = json.load(open(r'./data/data1_lab.json', 'r'))
+    RGB = json.load(open(r'./data/data1_rgb.json', 'r'))
 
 
     # 0812 green data
@@ -375,9 +375,9 @@ if __name__ == "__main__":
     # assert len(LAB) == 116 + 15
     # assert len(LAB_) == 2
 
-    save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\green_params_js'
+    save_params_dir = r'/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/zeiss_rgb2lab-dev/params_js'
 
-    tmp_dir = r'D:\work\project\卡尔蔡司膜色缺陷\tmp_xyz_res_js'
+    tmp_dir = r'./tmp_xyz_res_js'
     X_dict = dict()
     X_dict_ = dict()
 
