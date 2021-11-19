@@ -8,8 +8,8 @@ START DATE:      2021.11.05
 CONTACT:         yu.mo@smartmore.com
 
 Description:
-python get_color.py "rgb" "train" "/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/zeiss_rgb2lab-dev/1112_blue_test_data/1112/1/2.bmp" "/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/zeiss_rgb2lab-dev/1112_blue_test_data/1112/1.config"
-python get_color.py "rgb" "test" "/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/zeiss_rgb2lab-dev/1112_blue_test_data/1112/1" "/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/zeiss_rgb2lab-dev/1112_blue_test_data/1112/1.config"
+python get_color.py "rgb" "train" "./1118data/1118/1/3.bmp" "./1118data/1118/1.config"
+python get_color.py "rgb" "test" "./1118data/1118/1" "./1118data/1118/1.config"
 
 """
 import os
@@ -64,7 +64,7 @@ def update(x):
     value = ((v11, v21, v31), (v12, v22, v32))
 
     mask = cv2.inRange(real_img, value[0], value[1])
-    _, contours, hie = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hie = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     areas = []
     best_idx = -1
     best_area = 0
@@ -146,8 +146,8 @@ def show_distribute(r_, color):
 def get_distribute(r_, topk, color=None):
     distribute = collections.Counter(r_)
     # 防止设置的topk超过分布数目
-    # topk = min(topk, len(distribute))
-    topk = len(distribute)
+    topk = min(topk, len(distribute))
+    # topk = len(distribute)
     show_distribute(r_, color)
     sored = sorted(distribute.items(), key=lambda kv: (kv[1], kv[0]))[::-1]
     sum_color = 0
@@ -163,7 +163,7 @@ def slim_roi_rgb_distracte(img, mask, p):
     # print(img[mask != 0].mean(axis=0), '1')
     tmp = img[mask != 0]
     # 保留出现次数的topk像素, 丢弃其他, 然后这个部分取均值
-    topk = 3
+    topk = 4
     # # 丢弃分布中看两边k个数据, 剩下ll-2*k 取颜色均值
     # # remove_k = 2
     filtered_r = get_distribute(tmp[:, 0], topk, color='red')
@@ -177,6 +177,7 @@ def slim_roi_rgb_distracte(img, mask, p):
 
 
 def test(conf_path):
+    dir_name = conf_path.split('/')[-1].split('.')[0]
     global img, real_img, total_img, path
     global value, area_threshold, erode_threshold
     with open(conf_path) as f:
@@ -186,11 +187,12 @@ def test(conf_path):
         erode_threshold = conf.get("erode_threshold")
 
     image_paths = glob.glob(os.path.join(path, "*.bmp"))
+    single_dir_rgb = dict()
     for p in image_paths:
         img = imread(p)
         real_img = change_mode(img, color_mode)
         mask = cv2.inRange(real_img, tuple(value[0]), tuple(value[1]))
-        _, contours, hie = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hie = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         areas = []
         best_idx = -1
         best_area = 0
@@ -221,14 +223,20 @@ def test(conf_path):
         color = [round(c, 2) for c in color]
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
-        cv2.putText(img, "Color: {}".format(color), (100, 100), cv2.FONT_ITALIC, 2, (0, 0, 255), 2)
+        cv2.putText(img, "path: {}, Color: {}".format(p, color), (100, 100), cv2.FONT_ITALIC, 2, (0, 0, 255), 2)
         total_img = np.zeros((img.shape[0] // 4, img.shape[1] // 2, 3), np.uint8)
         total_img[:, :img.shape[1] // 4] = cv2.resize(img, (img.shape[1] // 4, img.shape[0] // 4))
         total_img[:, img.shape[1] // 4:] = cv2.resize(mask, (mask.shape[1] // 4, mask.shape[0] // 4))
         cv2.imshow('image_win', total_img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        img_name = p.split('/')[-1][:-4]
+        single_dir_rgb["{}_{}".format(dir_name, img_name)] = color
         print(p, color)
+    data = json.dumps(single_dir_rgb)
+    with open(r'./dir_{}_rgb.json'.format(dir_name), 'w') as js_file:
+        js_file.write(data)
+    print(single_dir_rgb)
 
 
 def main():
@@ -265,4 +273,15 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    # ll = 21
+    # a = 0
+    # for i in range(17, ll+1):
+    #     rgb_js = json.load(open(r"./dir_{}_rgb.json".format(i), 'r'))
+    #     a += len(rgb_js)
+    # print(a)
+    rgb_js = json.load(open(r"./dir_{}_rgb.json".format(16), 'r'))
+    for k in rgb_js:
+        print(k, rgb_js[k])
+
+
