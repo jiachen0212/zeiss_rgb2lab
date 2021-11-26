@@ -14,7 +14,6 @@ from sklearn.model_selection import KFold, cross_val_score as CVS, train_test_sp
 import os
 
 
-
 def cross_val(test_x, test_rgb_ImgName, yc_x, yc_rgb_ImgName, tmp_dir, save_params_dir, X_train, y_train, X, index, rgb_ImgName, yc_test=False):
     xyz_res = dict()
     yc_xyz_res = dict()
@@ -40,19 +39,20 @@ def cross_val(test_x, test_rgb_ImgName, yc_x, yc_rgb_ImgName, tmp_dir, save_para
         js_file.write(data)
 
     # yc_test
-    # test_pred = xgb_model.predict(yc_x)
-    # for ii, item in enumerate(test_pred):
-    #     value = ''.join(str(np.round(a, 3)) for a in yc_x[ii])
-    #     info = yc_rgb_ImgName[value]
-    #     yc_xyz_res[info] = str(item)
-    # data = json.dumps(yc_xyz_res)
-    # with open(yc_single_xyz, 'w') as js_file:
-    #     js_file.write(data)
+    test_pred = xgb_model.predict(yc_x)
+    for ii, item in enumerate(test_pred):
+        value = ''.join(str(np.round(a, 3)) for a in yc_x[ii])
+        info = yc_rgb_ImgName[value]
+        yc_xyz_res[info] = str(item)
+    data = json.dumps(yc_xyz_res)
+    with open(yc_single_xyz, 'w') as js_file:
+        js_file.write(data)
 
 
     # zeiss_test data
     test_pred = xgb_model.predict(test_x)
     for ii, item in enumerate(test_pred):
+        # print(yc_x[ii], 'yc')
         value = ''.join(str(np.round(a, 3)) for a in test_x[ii])
         info = test_rgb_ImgName[value]
         test_xyz_res[info] = str(item)
@@ -214,7 +214,6 @@ def show_b_gamma(org):
 
 
 def load_data(rgb, lab, index, gammaed=False):
-    k2s = open(r'./k2.txt', 'r').readlines()[0].split(',')[:-1]
     X_dict = dict()
     rgb_ImgName = dict()
     X , Y = [], []
@@ -223,36 +222,33 @@ def load_data(rgb, lab, index, gammaed=False):
     gammaed_r, gammaed_g, gammaed_b = [], [], []
     R,G,B = [], [], []
     for k, v in rgb.items():
-        if k != "":
-            r_, g_, b_, mask_area = float(v[0]) / 255, float(v[1]) / 255, float(v[2]) / 255, float(v[3])/(2464*2056*3)
-            if not gammaed:
-                X.append([r_, g_, b_, mask_area])
-                v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-                Y.append(v_[index])
-                rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-                X_dict[k] = [r_, g_, b_]
-            else:
-                k2s = []
-                if k not in k2s:
-                    R.append(r_)
-                    G.append(g_)
-                    B.append(b_)
-                    gamma_r_ = gamma(r_)
-                    gamma_g_ = gamma(g_)
-                    gamma_b_ = gamma(b_)
-                    k_gb = gamma_g_ / gamma_b_
-                    if k_gb < 1:
-                        bad_green_data.append(k)
-                    gammaed_r.append(gamma_r_)
-                    gammaed_g.append(gamma_g_)
-                    gammaed_b.append(gamma_b_)
-                    x = [gamma_r_, gamma_g_, gamma_b_] + [mask_area]  #  + [np.exp(r_), np.exp(g_), np.exp(b_)]
-                    X.append(x)
-                    X_dict[k] = x
-                    v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-                    Y.append(v_[index])
-                    ks.append(k)
-                    # rgb_ImgName[''.join(str(a) for a in x)] = k
+        [r_, g_, b_] = [float(v[i]) / 255 for i in range(3)]
+        if not gammaed:
+            X.append([r_, g_, b_])
+            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
+            Y.append(v_[index])
+            rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
+            X_dict[k] = [r_, g_, b_]
+        else:
+            R.append(r_)
+            G.append(g_)
+            B.append(b_)
+            gamma_r_ = gamma(r_)
+            gamma_g_ = gamma(g_)
+            gamma_b_ = gamma(b_)
+            k_gb = gamma_g_ / gamma_b_
+            if k_gb < 1:
+                bad_green_data.append(k)
+            gammaed_r.append(gamma_r_)
+            gammaed_g.append(gamma_g_)
+            gammaed_b.append(gamma_b_)
+            x = [gamma_r_, gamma_g_, gamma_b_] #  + [np.exp(r_), np.exp(g_), np.exp(b_)]
+            X.append(x)
+            X_dict[k] = x
+            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
+            Y.append(v_[index])
+            ks.append(k)
+            # rgb_ImgName[''.join(str(a) for a in x)] = k
 
     for ind in range(len(gammaed_g)):
         plt.plot([i for i in range(3)], [gammaed_r[ind], gammaed_g[ind], gammaed_b[ind]], color='pink')
@@ -379,14 +375,14 @@ def check_lab_res(res_txt, yc_y, seed, tmp_dir, js_y, X_dict):
     ycz_pred = json.load(open(os.path.join(tmp_dir, 'yc_xyz_2.json'), 'r'))
 
     d = len(yc_y)
-    # preds_lab = dict()
-    # for k, v in ycx_pred.items():
-    #     pre_x, pre_y, pre_z = float(v), float(ycy_pred[k]), float(ycz_pred[k])
-    #     pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
-    #     print("---", pre_l, pre_a, pre_b, k)
-    #     if (L[0] <= pre_l <= L[1]) and (A[0] <= pre_a <= A[1]) and (B[0] <= pre_b <= B[1]):
-    #         d -= 1
-    # print("11条lab异常样本, 模型判断为异常的条数: {}".format(d))
+    preds_lab = dict()
+    for k, v in ycx_pred.items():
+        pre_x, pre_y, pre_z = float(v), float(ycy_pred[k]), float(ycz_pred[k])
+        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
+        print("---", pre_l, pre_a, pre_b, k)
+        if (L[0] <= pre_l <= L[1]) and (A[0] <= pre_a <= A[1]) and (B[0] <= pre_b <= B[1]):
+            d -= 1
+    print("11条lab异常样本, 模型判断为异常的条数: {}".format(d))
 
     return c, ngs, preds_lab, d
 
@@ -436,10 +432,10 @@ def get_yc_data():
     Y = []
     ks = []
     ff = open('./mean_std.txt', 'r')
-    mean_ = [0.028919926781039693, 0.27672948248330487, 0.161808559955178, 0.56588099980361]
-    std_ = [0.0038255819955075963, 0.04170170235470357, 0.02495539742136734, 0.2592188260103616]
+    mean_ = [0.029004253081976097, 0.2774517724851633, 0.16223682530526276]
+    std_ = [0.003656373953675619, 0.03987487835872231, 0.023855584464027083]
     for k, v in yc_rgb.items():
-        x = gamma(float(v[0]) / 255), gamma(float(v[1]) / 255), gamma(float(v[2]) / 255), float(v[3])/(2464*2056*3)
+        x = [gamma(float(a)/255) for a in v]
         x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
         ks.append(k)
         X.append(x)
@@ -454,36 +450,32 @@ def get_yc_data():
 def get_test_data():
     test_rgb_ImgName = dict()
     test_rgb = json.load(open(r'./1118_test_rgb.json', 'r'))
-    # 手动加一条test数据
-    new_test_rgb = dict()
-    # new_test_rgb['8_2'] = [56.05, 158.9, 109.67]
-    for k, v in test_rgb.items():
-        new_test_rgb[k] = v
+
+    # 手动加入一些测试样本
+    test_rgb["5_9"] = [40.14, 122.44, 125.12]
+    test_rgb["5_13"] = [40.45, 123.65, 123.75]
+    test_rgb["5_10"] = [39.28, 121.31, 126.88]
 
     X = []
     ks = []
     ff = open('./mean_std.txt', 'r')
-    # mean_ = [float(a) for a in ff.readlines()[0].split(',')[:-1]]
-    # std_ = [float(a) for a in ff.readlines()[0].split(',')[:-1]]
-    mean_ = [0.028919926781039693, 0.27672948248330487, 0.161808559955178, 0.56588099980361]
-    std_ = [0.0038255819955075963, 0.04170170235470357, 0.02495539742136734, 0.2592188260103616]
-    for k, v in new_test_rgb.items():
-        print(v)
-        x = gamma(float(v[0]) / 255), gamma(float(v[1]) / 255), gamma(float(v[2]) / 255), float(v[3])/(2464*2056*3)
-        print(x)
+    mean_ = [0.029004253081976097, 0.2774517724851633, 0.16223682530526276]
+    std_ = [0.003656373953675619, 0.03987487835872231, 0.023855584464027083]
+    for k, v in test_rgb.items():
+        x = [gamma(float(a)/255) for a in v]
         x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
         ks.append(k)
         X.append(x)
     X = np.array(X)
+
     for ind, x in enumerate(X):
         test_rgb_ImgName[''.join(str(np.round(a, 3)) for a in x)] = ks[ind]
 
     return X, test_rgb_ImgName
 
 
-def TestReslut(seeds):
-    # seeds.remove(11)
-    # seeds.remove(33)
+def TestReslut(seeds, test_gt):
+    seeds.remove(11)
     # 输出test data pred lab_value
     res = dict()
     for seed in seeds:
@@ -502,22 +494,70 @@ def TestReslut(seeds):
         v = [np.round(a/len(seeds), 2) for a in v]
         res[k] = v
 
-    data = json.dumps(res, indent=4)
+    data = json.dumps(res)
     with open('./test_data_lab.json', 'w') as js_file:
         js_file.write(data)
 
-    for seed in seeds:
-        js_ = json.load(open('./seed_{}_test_lab.json'.format(seed), 'r'))
-        for k, v in js_.items():
-            diff_k = [abs(v[i] - res[k][i]) for i in range(3)]
-            if (diff_k[0] >= 0.5) or (diff_k[1] >= 0.5) or (diff_k[2] >= 0.5):
-                print(seed, k, diff_k)
+    # for seed in seeds:
+    #     js_ = json.load(open('./seed_{}_test_lab.json'.format(seed), 'r'))
+    #     for k, v in js_.items():
+    #         diff_k = [abs(v[i] - res[k][i]) for i in range(3)]
+    #         if (diff_k[0] >= 0.5) or (diff_k[1] >= 0.5) or (diff_k[2] >= 0.5):
+    #             print(seed, k, diff_k)
 
-    gt = json.load(open(r'./8_lab.json', 'r'))   # r'./9_10_lab.json'
-    for k, v in gt.items():
-        diff_k = [abs(v[i] - res[k][i]) for i in range(3)]
-        if (diff_k[0] >= 0.5) or (diff_k[1] >= 0.5) or (diff_k[2] >= 0.5):
-            print(k, diff_k)
+    for k, v in test_gt.items():
+        pred = [float(a) for a in res[k]]
+        diff = [abs(v[i] - pred[i]) for i in range(3)]
+        for di in diff:
+            if di >= 0.5:
+                print("img: {}, diff: {}".format(k, diff))
+    for k in res:
+        try:
+            test_gt[k]
+        except:
+            print(k, res[k])
+            continue
+
+    # read_to_csv
+    # LAB合规范围
+    L = [9, 14]
+    A = [-24, -15]
+    B = [-2, 10]
+    import pandas as pd
+    df = pd.DataFrame()
+    ks, Ls, As, Bs, ook = [], [], [], [], []
+    for k, v in res.items():
+        ks.append(k)
+        l, a, b = v[0], v[1], v[2]
+        Ls.append(l)
+        As.append(a)
+        Bs.append(b)
+        if (L[0] <= l <= L[1]) and (A[0] <= a <= A[1]) and (B[0] <= b <= B[1]):
+            ook.append(r"在范围内")
+        else:
+            ook.append(r"不在范围内")
+    df['img_name'] = ks
+    df['pred_L'] = Ls
+    df['pred_A'] = As
+    df['pred_B'] = Bs
+    df['LAB是否在范围内'] = ook
+    df.to_csv(r'./green_test_lab.csv')
+
+
+def get_gt_lab():
+    import xlrd
+    test_gt = dict()
+    test_gt_csv = r'./params_js_0.92/test_data_gt.xlsx'
+    wb = xlrd.open_workbook(test_gt_csv)
+    data = wb.sheet_by_name(r'Sheet1')
+    rows = data.nrows
+    for i in range(1, rows):
+        im_name = data.cell(i, 0).value
+        l, a, b = data.cell(i, 1).value, data.cell(i, 2).value, data.cell(i, 3).value
+        test_gt[im_name] = [l, a, b]
+
+    return test_gt
+
 
 if __name__ == "__main__":
 
@@ -525,7 +565,6 @@ if __name__ == "__main__":
     RGB = json.load(open(r'./1118_train_rgb.json', 'r'))
 
     save_params_dir = r'./params_js_0.92'
-    # save_params_dir = r'./params_js_1124'
     if not os.path.exists(save_params_dir):
         os.mkdir(save_params_dir)
 
@@ -580,7 +619,7 @@ if __name__ == "__main__":
     print("判断出异常样本比例: {}".format(yc_res / (len(seeds) * len(yc_y))))
 
     # show_result(all_ngs, RGB)
-    TestReslut(seeds)
-
+    gt_lab = get_gt_lab()
+    TestReslut(seeds, gt_lab)
 
 
