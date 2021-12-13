@@ -8,20 +8,10 @@ START DATE:      2021.11.05
 CONTACT:         yu.mo@smartmore.com
 
 Description:
-python get_color.py "rgb" "train" "./1118data/1118/16/14.bmp" "./1118data/1118/16.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/2" "./1118data/膜色1118/1118/2.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/4" "./1118data/膜色1118/1118/4.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/3" "./1118data/膜色1118/1118/3.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/5" "./1118data/膜色1118/1118/5.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/6" "./1118data/膜色1118/1118/6.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/7" "./1118data/膜色1118/1118/7.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/8" "./1118data/膜色1118/1118/8.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/9" "./1118data/膜色1118/1118/9.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/10" "./1118data/膜色1118/1118/10.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/11" "./1118data/膜色1118/1118/11.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/12" "./1118data/膜色1118/1118/12.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/13" "./1118data/膜色1118/1118/13.json"
-python get_color.py "rgb" "test" "./1118data/膜色1118/1118/14" "./1118data/膜色1118/1118/14.json"
+
+train: python get_color.py "rgb" "train"  "D:\work\project\卡尔蔡司膜色缺陷\1209\data\18\3.bmp" "D:\work\project\卡尔蔡司膜色缺陷\1209\data\18.json"
+
+test: python get_color.py "rgb" "test"  "D:\work\project\卡尔蔡司膜色缺陷\1209\data\2" "D:\work\project\卡尔蔡司膜色缺陷\1209\data\2.json"
 
 """
 import os
@@ -187,7 +177,7 @@ def slim_roi_rgb_distracte(img, mask, p):
     return [filtered_r, filtered_g, filtered_b]
 
 
-def test(conf_path):
+def test(conf_path, process_mode):
     global img, real_img, total_img, path
     global value, area_threshold, erode_threshold
     with open(conf_path) as f:
@@ -230,20 +220,23 @@ def test(conf_path):
         img1 = img.copy()
         img1[mask != 0] = 255
 
-        tmp1, tmp2 = p.split('/')[-2], p.split('/')[-1]
+        print(p)
+        tmp1, tmp2 = p.split('\\')[-2], p.split('\\')[-1]
         img_name = "{}_{}".format(tmp1, tmp2.split('.')[0])
-        print("img_name: {}".format(img_name))
+        # print("img_name: {}".format(img_name))
         cv2.putText(img, "Color: {}， img_name: {}".format(color, img_name), (100, 100), cv2.FONT_ITALIC, 2, (0, 0, 255), 2)
+
         total_img = np.zeros((img.shape[0] // 4, img.shape[1] // 2, 3), np.uint8)
         total_img[:, :img.shape[1] // 4] = cv2.resize(img, (img.shape[1] // 4, img.shape[0] // 4))
         total_img[:, img.shape[1] // 4:] = cv2.resize(img1, (mask.shape[1] // 4, mask.shape[0] // 4))
+
         cv2.imshow('image_win', total_img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         print(p, color)
         dir_color[img_name] = color
         data = json.dumps(dir_color)
-        with open(r'./1122_rgb_js/dir_{}_rgb.json'.format(tmp1), 'w') as js_file:
+        with open(r'./1209/dir_{}_rgb.json'.format(tmp1), 'w') as js_file:
             js_file.write(data)
 
 
@@ -276,33 +269,71 @@ def main():
         real_img = change_mode(img, color_mode)
         train(conf_path)
     else:
-        test(conf_path)
+        test(conf_path, process_mode)
 
 
-def get_lab():
+
+def show_yc_zc(zc, yc, all_trian_rgb):
+    # lab
+    ind1, ind2 = 0, 0
+    for k, v in zc.items():
+        if ind1 == 0:
+            plt.plot([0,1,2], v, color='pink', label='lab_zc')
+        else:
+            plt.plot([0, 1, 2], v, color='pink')
+        ind1 += 1
+    for k, v in yc.items():
+        if ind2 == 0:
+            plt.plot([0,1,2], v, color='cornflowerblue', label='lab_yc')
+        else:
+            plt.plot([0, 1, 2], v, color='cornflowerblue')
+        ind2 += 1
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # rgb
+    ind1, ind2 = 0, 0
+    for k, v in zc.items():
+        if ind1 == 0:
+            plt.plot([0,1,2], all_trian_rgb[k], color='pink', label='lab_zc')
+        else:
+            plt.plot([0, 1, 2], all_trian_rgb[k], color='pink')
+        ind1 += 1
+    for k, v in yc.items():
+        if ind2 == 0:
+            plt.plot([0,1,2], all_trian_rgb[k], color='cornflowerblue', label='lab_yc')
+        else:
+            plt.plot([0, 1, 2], all_trian_rgb[k], color='cornflowerblue')
+        ind2 += 1
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+def get_lab(LAB_OK=True):
     # green data, g < b
-    bad_green = ['5_9', '5_13', '5_10', '15_13']
-    L = [9, 14]
+    bad_green = []
+    L = [9.5, 14.5]
     A = [-24, -15]
     B = [-2, 10]
     zc, yc = dict(), dict()
-    lab_file = r'./1118data/膜色识别11-18.xlsx'
+    lab_file = r'D:\work\project\卡尔蔡司膜色缺陷\1209\膜色识别~测试 12-09th.xlsx'
     wb = xlrd.open_workbook(lab_file)
     all_lab_value = dict()
-    ind1 = [1, 2, 3, 7, 8, 9, 10, 11, 14, 15, 16]
-    ind2 = [4, 5, 6, 12, 13]
-    sheets = ["Sheet{}".format(ind) for ind in ind1]
-    sheets += ["Sheet{}+".format(ind) for ind in ind2]
+    ind1 = [i for i in range(1, 13)] + [15]
+    ind2 = [13, 14]
+    sheet1 = ["Sheet{}".format(ind) for ind in ind1]
+    sheet2 = ["Sheet{}+".format(ind) for ind in ind2]
+    sheets = sheet1 + sheet2
     test_ims = []
     for sheet in sheets:
         data = wb.sheet_by_name(sheet)
-        rows = data.nrows
         title = data.row_values(0)
         l_index, im_name_index = title.index("L*"), title.index("ID")
-        for j in range(1, rows):
+        for j in range(1, 21):
             row_data = data.row_values(j)
-            img_name = row_data[im_name_index]
-            img_name = "{}_{}".format(img_name.split('-')[0], img_name.split('-')[1])
+            img_name = row_data[im_name_index].split('-')
+            img_name = "{}_{}".format(img_name[0], img_name[1])
             l, a, b = row_data[l_index], row_data[l_index + 1], row_data[l_index + 2]
             try:
                 float(l)
@@ -317,59 +348,72 @@ def get_lab():
                 yc[img_name] = [l,a,b]
     print("len zc: {}".format(len(zc)))
     print("len yc: {}, {}".format(len(yc), yc))
+    print("all data size: ", len(all_lab_value))
 
-    # 漏掉了这张bmp
-    del all_lab_value['16_14']
-    print("剔除异常样本前, size: ", len(all_lab_value))
-    # 剔除异常样本
-    all_im_names = list(all_lab_value.keys())
-    for k in all_im_names:
-        if (k in yc) or (k in bad_green) or (k.split('_')[0] in ['15', '16']):
-            del all_lab_value[k]
-    print("剔除异常样本后, size: ", len(all_lab_value))
+    # yc = ['13_12', '5_13', '3_17', '3_10']
+    # ff = open('./ycs.txt', 'w')
+    # for k in yc:
+    #     ff.write(k+',')
+
+    # yc["13_3"] = []
+
+    if LAB_OK:
+        alls = list(all_lab_value.keys())
+        for key in alls:
+            if key in yc:
+                del all_lab_value[key]
 
     data = json.dumps(all_lab_value)
-    with open(r'./1118_lab.json', 'w') as js_file:
+    with open(r'./1209_green_lab.json', 'w') as js_file:
         js_file.write(data)
 
-    ff = open('./test_ims.txt', 'w')
-    for tes in test_ims:
-        ff.write(tes + ',')
-    ff.close()
-
     # split train and test
-    inds = [i for i in range(1, 17)]
+    inds = [i for i in range(1, 16)]
     all_trian_rgb = dict()
     all_test_rgb = dict()
     yc_rgb = dict()
     for ind in inds:
-        js = json.load(open(r'./1122_rgb_js/dir_{}_rgb.json'.format(ind), 'r'))
+        js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
         for k, v in js.items():
-            if (k not in test_ims) and (k not in yc) and (k not in bad_green) and ((k.split('_')[0] not in ['15', '16'])):
-                all_trian_rgb[k] = v
-            elif (k not in yc) and (k not in bad_green) and ((k.split('_')[0] not in ['15', '16'])):
-                all_test_rgb[k] = v
-            elif k in yc:
-                yc_rgb[k] = v
+            if v[1] <= v[2]:
+                bad_green.append(k)
+    print("绿膜数据, g值<b值的数量: {}".format(len(bad_green)))
+    for ind in inds:
+        js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
+        for k, v in js.items():
+            if LAB_OK:
+                if (k not in test_ims) and (k not in yc) and (k not in bad_green):
+                    all_trian_rgb[k] = v
+                elif (k not in yc) and (k not in bad_green):
+                    all_test_rgb[k] = v
+                elif k in yc:
+                    yc_rgb[k] = v
+            else:
+                if (k not in test_ims) and (k not in bad_green):
+                    all_trian_rgb[k] = v
+                elif (k not in yc) and (k not in bad_green):
+                    all_test_rgb[k] = v
+                elif k in yc:
+                    yc_rgb[k] = v
+
+    # show_yc_zc(zc, yc, all_trian_rgb)
+
+    # save yc_lab'r rgb_sict()
+    # data = json.dumps(yc)
+    # with open(r'./1209_yc_rgb.json', 'w') as js_file:
+    #     js_file.write(data)
+
+
     data = json.dumps(all_trian_rgb)
-    with open(r'./1118_train_rgb.json', 'w') as js_file:
+    with open(r'./1209_train_rgb.json', 'w') as js_file:
         js_file.write(data)
     print(len(all_trian_rgb), len(all_test_rgb), len(all_lab_value))
     assert len(all_trian_rgb) == len(all_lab_value)
     print("train data: {}".format(len(all_trian_rgb)))
     data = json.dumps(all_test_rgb)
-    with open(r'./1118_test_rgb.json', 'w') as js_file:
+    with open(r'./1209_test_rgb.json', 'w') as js_file:
         js_file.write(data)
     print("test data: {}".format(len(all_test_rgb)))
-
-    # LAB异常样本落盘
-    data = json.dumps(yc)
-    with open(r'./bad_lab.json', 'w') as js_file:
-        js_file.write(data)
-
-    data = json.dumps(yc_rgb)
-    with open(r'./bad_rgb.json', 'w') as js_file:
-        js_file.write(data)
 
 
 def show_dir_ng_ok():
@@ -404,18 +448,18 @@ def get_blue_lab():
     A = [-8, 3]
     B = [-22, -13]
     zc, yc = dict(), dict()
-    lab_file = r'./1118data/膜色识别11-18.xlsx'
+    lab_file = r'D:\work\project\卡尔蔡司膜色缺陷\1209\膜色识别~测试 12-09th.xlsx'
     wb = xlrd.open_workbook(lab_file)
     all_lab_value = dict()
-    ind = [17, 18, 20, 21]
-    sheets = ["Sheet{}".format(ind) for ind in ind] + ['Sheet19.']
+    ind = [16, 18, 19, 20, 21]
+    sheets = ["Sheet{}".format(ind) for ind in ind] + ['Sheet17+']
     test_ims = []
     for sheet in sheets:
         data = wb.sheet_by_name(sheet)
         rows = data.nrows
         title = data.row_values(0)
         l_index, im_name_index = title.index("L*"), title.index("ID")
-        for j in range(1, rows):
+        for j in range(1, 21):
             row_data = data.row_values(j)
             img_name = row_data[im_name_index]
             img_name = "{}_{}".format(img_name.split('-')[0], img_name.split('-')[1])
@@ -436,7 +480,7 @@ def get_blue_lab():
 
 
     data = json.dumps(all_lab_value)
-    with open(r'./1118_blue_lab.json', 'w') as js_file:
+    with open(r'./1209_blue_lab.json', 'w') as js_file:
         js_file.write(data)
 
     ff = open('./blue_test_ims.txt', 'w')
@@ -444,24 +488,24 @@ def get_blue_lab():
         ff.write(tes + ',')
     ff.close()
 
-    inds = [i for i in range(17, 22)]
+    inds = [i for i in range(16, 22)]
     all_trian_rgb = dict()
     all_test_rgb = dict()
-    yc_rgb = dict()
+
     for ind in inds:
-        js = json.load(open(r'./1122_rgb_js/dir_{}_rgb.json'.format(ind), 'r'))
+        js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
         for k, v in js.items():
             if (k not in test_ims):
                 all_trian_rgb[k] = v
             else:
                 all_test_rgb[k] = v
     data = json.dumps(all_trian_rgb)
-    with open(r'./1118_blue_train_rgb.json', 'w') as js_file:
+    with open(r'./1209_blue_train_rgb.json', 'w') as js_file:
         js_file.write(data)
     assert len(all_trian_rgb) == len(all_lab_value)
     print("train data: {}".format(len(all_trian_rgb)))
     data = json.dumps(all_test_rgb)
-    with open(r'./1118_blue_test_rgb.json', 'w') as js_file:
+    with open(r'./1209_blue_test_rgb.json', 'w') as js_file:
         js_file.write(data)
     print("test data: {}".format(len(all_test_rgb)))
 
@@ -474,7 +518,7 @@ if __name__ == '__main__':
     # main()
 
     # get lab
-    # get_lab()
+    # get_lab(LAB_OK=True)
     get_blue_lab()
 
     # show_dir_ng_ok()
