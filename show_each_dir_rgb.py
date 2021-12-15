@@ -304,7 +304,7 @@ def pass_unpass_show_each_oven_rgb():
 
     plt.grid()
     plt.legend()
-    plt.show()
+    # plt.show()
 
 # pass_unpass_show_each_oven_rgb()
 
@@ -328,7 +328,167 @@ def write_to_csv():
     df['B'] = Bs
     df.to_csv(r'./1209_green_rgb.csv')
 
-write_to_csv()
+# write_to_csv()
+
+
+import xlrd
+ff = open('./res.txt', 'w')
+L = [9.5, 14.5]
+A = [-24, -15]
+B = [-2, 10]
+test_data_gt = dict()
+wb = xlrd.open_workbook(r'./1209_green_data_lab_reslut2.xlsx')
+data = wb.sheet_by_name(r'Sheet1')
+rows = data.nrows
+c,d = 0, 0
+for i in range(1, rows):
+    pass_or_unpass = ''
+    line = data.row_values(i)
+    real_l, real_a, real_b = line[6], line[7], line[8]
+    test_data_gt[line[1]] = [real_l, real_a, real_b]
+    if (L[0] <= real_l <= L[1]) and (A[0] <= real_a<= A[1]) and (B[0] <= real_b <= B[1]):
+        pass_or_unpass = True
+    else:
+        pass_or_unpass = False
+    diffl, diffa, diffb = line[10], line[11], line[12]
+    if abs(diffl) >= 0.5 or abs(diffa) >= 0.5 or abs(diffb) >= 0.5:
+        c += 1
+        info = "img_name: {}, diff: {}, LAB_range: {}".format(line[1], [diffl, diffa, diffb], pass_or_unpass)
+        ff.write(info+'\n')
+        if not pass_or_unpass:
+            d += 1
+            print(line[1], 'LAB异常')
+
+print(c, d)
+# print(test_data_gt)
+data = json.dumps(test_data_gt)
+with open(r'./1209_green_test_lab.json', 'w') as js_file:
+    js_file.write(data)
+
+
+# c, d = 0, 0
+# seed_mean_pred_test_lab = json.load(open(r'./mean_pred_test_lab.json', 'r'))
+# for k, v in test_data_gt.items():
+#     pass_ = False
+#     if (L[0] <= v[0] <= L[1]) and (A[0] <= v[1] <= A[1]) and (B[0] <= v[2] <= B[1]):
+#         pass_ = True
+#     diff = [v[i]-seed_mean_pred_test_lab[k][i] for i in range(3)]
+#     if abs(diff[0]) >= 0.5 or abs(diff[1]) >= 0.5 or abs(diff[2]) >= 0.5:
+#         c += 1
+#         if not pass_:
+#             d += 1
+#             print(k, 'LAB异常')
+# print(c, d)
+
+
+bad1 = ['4_2', '4_6', '9_7', '14_6', '14_16', '14_8']
+bad2 = ['3_11', '4_1','4_12','4_15','4_16','8_6','10_15','11_14','12_7','13_16','14_2','14_11','14_13','14_14','14_15','14_17']
+bad3 = ['15_9', '15_10', '5_18', '13_15', '9_18']
+all_bad = bad3 + bad2 + bad1
+
+inds = [i for i in range(1, 16)]
+colors = ['aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'yellow', 'red', 'darkslateblue', 'turquoise',
+          'blue', 'yellow', 'black', 'pink', 'red', 'green', 'cornflowerblue', 'purple', 'turquoise']
+ind1, ind2, ind3, ind4 = 0,0,0, 0
+index = 0
+train_rgb = json.load(open(r'./1209_train_rgb.json', 'r'))
+test_rgb = json.load(open(r'./1209_test_rgb.json', 'r'))
+# for ind in inds:
+#     js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
+#     for k, v in js.items():
+#         if k in train_rgb:
+#             if ind4 == 0:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='pink', label='train data')
+#                 ind4 += 1
+#             else:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='pink')
+#         elif k in bad1:
+#             if ind1 == 0:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='blue', label='diff<=0.6')
+#                 ind1 += 1
+#             else:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='blue')
+#         elif k in bad2:
+#             if ind2 == 0:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='yellow', label='diff>0.6')
+#                 ind2 += 1
+#             else:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='yellow')
+#         elif k in bad3:
+#             if ind3 == 0:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red', label='bad LAB_Range')
+#                 ind3 += 1
+#             else:
+#                 plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red')
+#         # else:
+#         #     if index == 0:
+#         #         plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='cornflowerblue', label='ok_test')
+#         #         index += 1
+#         #     else:
+#         #         plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='cornflowerblue')
+# plt.legend()
+# plt.grid()
+# plt.show()
+
+a,b,c = 0,0,0
+bad = ['3_11','8_6','10_15','11_14','12_7', '13_16']
+for ind in inds:
+    js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
+    for k, v in js.items():
+        if k in train_rgb:
+        #     if a == 0:
+        #         plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='pink', label='train data')
+        #         a += 1
+        #     else:
+        #         plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='pink')
+            pass
+        elif k in test_rgb:
+            if k not in bad:
+                if b == 0:
+                    plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='cornflowerblue', label='test data')
+                    b += 1
+                else:
+                    plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='cornflowerblue')
+
+            else:
+                if c == 0:
+                    plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red', label='not 4 14, diff>0.6')
+                    c += 1
+                else:
+                    plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red')
+plt.legend()
+plt.grid()
+plt.show()
 
 
 
+# rgb lab的值, 一起对照输出一份?
+train_lab = json.load(open(r'./1209_green_lab.json', 'r'))
+train_rgb = json.load(open(r'./1209_train_rgb.json', 'r'))
+test_rgb = json.load(open(r'./1209_test_rgb.json', 'r'))
+# test_data_gt
+ks, labs, rgbs = [], [], []
+for k, v in train_lab.items():
+    ks.append(k)
+    labs.append(v)
+    rgbs.append(train_rgb[k])
+for k, v in test_data_gt.items():
+    ks.append(k)
+    labs.append(v)
+    rgbs.append(test_rgb[k])
+
+Rs = [a[0] for a in rgbs]
+Gs = [a[1] for a in rgbs]
+Bs = [a[2] for a in rgbs]
+L = [a[0] for a in labs]
+A = [a[1] for a in labs]
+B = [a[2] for a in labs]
+df = pd.DataFrame()
+df["im_name"] = ks
+df["R"] = Rs
+df["G"] = Gs
+df["B"] = Bs
+df["L_"] = L
+df["A_"] = A
+df["B_"] = B
+df.to_csv(r'./all_data_lab_rgb.csv')

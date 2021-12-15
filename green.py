@@ -598,7 +598,11 @@ def get_gt_lab():
 
 
 
-def seed_pred_result():
+def seed_pred_result(seeds):
+    # 删除和吗mean之后结果差异很大的seed_res
+    seeds.remove(165)
+    seeds.remove(440)
+    seeds.remove(495)
     test_lab = dict()
     pred_test_x = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(0, 0)), 'r'))
     for k in pred_test_x:
@@ -630,7 +634,7 @@ def seed_pred_result():
         for k, v in pred_res.items():
             if (abs(v[0] - test_lab[k][0]) >= 0.5) or (abs(v[1] - test_lab[k][1]) >= 0.5) or (
                     abs(v[2] - test_lab[k][2]) >= 0.5):
-                print(seed)
+                print("bad seed: {}".format(seed))
 
 
 def train_data_all_in_model(test_x, test_rgb_ImgName):
@@ -688,8 +692,8 @@ if __name__ == "__main__":
     print("交叉验证的acc: {}".format(res/(len(seeds)*len(X_dict))))
     show_result(all_ngs, RGB)
 
-    # seed_pred_result()
-    train_data_all_in_model(test_x, test_rgb_ImgName)
+    seed_pred_result(seeds)
+    # train_data_all_in_model(test_x, test_rgb_ImgName)
 
 
 

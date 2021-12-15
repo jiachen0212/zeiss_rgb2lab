@@ -456,7 +456,6 @@ def get_blue_lab():
     test_ims = []
     for sheet in sheets:
         data = wb.sheet_by_name(sheet)
-        rows = data.nrows
         title = data.row_values(0)
         l_index, im_name_index = title.index("L*"), title.index("ID")
         for j in range(1, 21):
@@ -493,7 +492,7 @@ def get_blue_lab():
     all_test_rgb = dict()
 
     for ind in inds:
-        js = json.load(open(r'./1209/dir_{}_rgb.json'.format(ind), 'r'))
+        js = json.load(open(r'1209/dir_{}_rgb.json'.format(ind), 'r'))
         for k, v in js.items():
             if (k not in test_ims):
                 all_trian_rgb[k] = v
@@ -518,8 +517,8 @@ if __name__ == '__main__':
     # main()
 
     # get lab
-    # get_lab(LAB_OK=True)
-    get_blue_lab()
+    get_lab(LAB_OK=False)
+    # get_blue_lab()
 
     # show_dir_ng_ok()
 

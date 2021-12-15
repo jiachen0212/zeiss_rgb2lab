@@ -163,7 +163,7 @@ def base_red_blue_compare_green(data_lab, data_rgb, save_dir):
 
 
 def change_dir(k):
-    return str(int(k.split('_')[0])-14)+'_'+k.split('_')[1]
+    return str(int(k.split('_')[0]))+'_'+k.split('_')[1]
 
 
 def base_green_red_compare_blue(data_lab, data_rgb, save_dir):
@@ -256,25 +256,21 @@ def base_green_blue_check_red(data_lab, data_rgb, save_dir):
         tmp_lab = labs[:i] + labs[i + 1:]
         tmp_rgb = rgbs[:i] + rgbs[i + 1:]
         tmp_ks = ks[:i] + ks[i + 1:]
-        # a, b = 0, 0
         for j, tmp_rgb_ in enumerate(tmp_rgb):
             # rgb的gb值差值<1
-            if (abs(tmp_rgb_[2]-cur_rgb[2]) < 1) and (abs(tmp_rgb_[1]-cur_rgb[1]) < 1):
+            if (abs(tmp_rgb_[2]-cur_rgb[2]) <= 0.5) and (abs(tmp_rgb_[1]-cur_rgb[1]) <= 0.5):
                 a += 1
                 tmp_lab_ = tmp_lab[j]
                 if ((tmp_rgb_[0] > cur_rgb[0]) and (tmp_lab_[0] > cur_lab[0]) or ((tmp_rgb_[0] <= cur_rgb[0]) and (tmp_lab_[0] <= cur_lab[0]))):
                     b += 1
                 else:
                     bad_pair.append([ks[i], tmp_ks[j]])
-    print("all green_blue similarity: {}, matched red: {}".format(a, b))
-    print(len(bad_pair))
     slim_bad_pair = []
     for i in range(len(bad_pair)):
         slim_bad_pair.append(bad_pair[i])
         for j in range(i, len(bad_pair)):
             if bad_pair[i] == [bad_pair[j][1], bad_pair[j][0]]:
                 slim_bad_pair.remove(bad_pair[i])
-    print(len(slim_bad_pair))
     # 输出不单调的lab和rgb
     for k in slim_bad_pair:
         line1 = "dir_name1: {}, lab: {}, rgb: {}".format(change_dir(k[0]), data_lab[k[0]], data_rgb[k[0]])
@@ -307,10 +303,19 @@ def json2csv(data1_lab, data1_rgb):
     data1.to_csv(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab_rgb.csv', index=False)
 
 
+def gamma(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/1.055, 2.4)
+    else:
+        a /= 12.92
+
+    return a
+
 
 def show_rgb_lab_distracte(data1_lab, data1_rgb):
     L,A,B = [],[],[]
     r,g,b = [], [], []
+    grammed_r, grammed_g, grammed_b = [], [], []
     for k, v in data1_lab.items():
         L.append(float(v[0]))
         A.append(float(v[1]))
@@ -318,16 +323,31 @@ def show_rgb_lab_distracte(data1_lab, data1_rgb):
         r.append(float(data1_rgb[k][0]))
         g.append(float(data1_rgb[k][1]))
         b.append(float(data1_rgb[k][2]))
+        grammed_r.append(gamma(float(data1_rgb[k][0])))
+        grammed_g.append(gamma(float(data1_rgb[k][1])))
+        grammed_b.append(gamma(float(data1_rgb[k][2])))
+
 
     plt.hist(x=r, bins='auto', color='red', alpha=0.7, rwidth=0.85, label='r')
     plt.hist(x=g, bins='auto', color='green', alpha=0.7, rwidth=0.85, label='g')
     plt.hist(x=b, bins='auto', color='blue', alpha=0.7, rwidth=0.85, label='b')
     plt.grid(axis='y', alpha=0.75)
-    plt.title('0924data-rgb')
+    plt.title('rgb')
     plt.legend()
     plt.xlabel('Value')
     plt.ylabel('Frequency')
     plt.show()
+
+    plt.hist(x=grammed_r, bins='auto', color='red', alpha=0.7, rwidth=0.85, label='r')
+    plt.hist(x=grammed_g, bins='auto', color='green', alpha=0.7, rwidth=0.85, label='g')
+    plt.hist(x=grammed_b, bins='auto', color='blue', alpha=0.7, rwidth=0.85, label='b')
+    plt.grid(axis='y', alpha=0.75)
+    plt.title('gammaed_rgb')
+    plt.legend()
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
 
     plt.hist(x=L, bins='auto', color='lightsalmon', alpha=0.7, rwidth=0.85, label='L')
     plt.hist(x=A, bins='auto', color='pink', alpha=0.7, rwidth=0.85, label='A')
@@ -348,17 +368,12 @@ if __name__ == "__main__":
     # json2csv(data1_lab, data1_rgb)
 
     # RGB中, RG接近, B越大b越小; GB接近, R越大a越大; RB接近, G越大b越小..
+    data1_lab = json.load(open(r'./1209_green_test_lab.json', 'r'))
+    data1_rgb = json.load(open(r'./1209_test_rgb.json', 'r'))
 
-    # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_lab.json', 'r'))
-    # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\data1_rgb.json', 'r'))
-
-    data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_lab.json', 'r'))
-    data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924green_rgb.json', 'r'))
-
-    # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_lab.json', 'r'))
-    # data1_rgb = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0812blue_rgb.json', 'r'))
-
-    save_dir = r'D:\work\project\卡尔蔡司膜色缺陷\data\rgb_lab一致性检查'
+    save_dir = r'D:\work\project\卡尔蔡司膜色缺陷\1209\rgb_lab一致性检查'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     # 蓝膜数据
     # data1_lab = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\data\0924blue_lab.json', 'r'))
@@ -366,24 +381,18 @@ if __name__ == "__main__":
 
     # fun(data1_lab, data1_rgb)
 
-    bad_green = base_red_blue_compare_green(data1_lab, data1_rgb, save_dir)
-    bad_blue = base_green_red_compare_blue(data1_lab, data1_rgb, save_dir)
+    # bad_green = base_red_blue_compare_green(data1_lab, data1_rgb, save_dir)
+    # bad_blue = base_green_red_compare_blue(data1_lab, data1_rgb, save_dir)
     bad_red = base_green_blue_check_red(data1_lab, data1_rgb, save_dir)
 
-    all_bad = []
-    for bad_list in [bad_green, bad_blue, bad_red]:
-        for a in bad_list:
-            all_bad.extend(a)
-
-    set_all_bad = list(set(all_bad))
+    # all_bad = []
+    # for bad_list in [bad_green, bad_blue, bad_red]:
+    #     for a in bad_list:
+    #         all_bad.extend(a)
+    #
+    # set_all_bad = list(set(all_bad))
     # print(len(set_all_bad))
     # print(set_all_bad)
 
-    show_rgb_lab_distracte(data1_lab, data1_rgb)
-
-
-
-
-
-
+    # show_rgb_lab_distracte(data1_lab, data1_rgb)
 
