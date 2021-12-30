@@ -11,22 +11,49 @@ import json
 import numpy as np
 from scipy.stats import uniform, randint
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold, cross_val_score as CVS, train_test_split as TTS
 import os
 
 
-def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, index, rgb_ImgName, yc_x, yc_rgb_ImgName):
+def show_train_test_mse(xgb_model, X_train, X_test, ind):
+
+    train_xyz, test_xyz = dict(), dict()
+    train_pred, test_pred = xgb_model.predict(X_train), xgb_model.predict(X_test)
+    for ii, item in enumerate(train_pred):
+        value = ''.join(str(np.round(a, 3)) for a in X[ii])
+        info = rgb_ImgName[value]
+        train_xyz[info] = str(item)
+    for ii, item in enumerate(test_pred):
+        value = ''.join(str(np.round(a, 3)) for a in X[ii])
+        info = rgb_ImgName[value]
+        test_xyz[info] = str(item)
+
+    data = json.dumps(train_xyz)
+    with open('./train_{}_xyz.json'.format(ind), 'w') as js_file:
+        js_file.write(data)
+
+    data = json.dumps(test_xyz)
+    with open('./test_{}_xyz.json'.format(ind), 'w') as js_file:
+        js_file.write(data)
+
+
+def cross_val(tmp_dir, save_params_dir, X_train, y_train, X_test, X, index, rgb_ImgName):
     xyz_res = dict()
-    yc_xyz_res = dict()
     single_xyz_res = os.path.join(tmp_dir, 'xyz_{}.json'.format(index))
-    yc_xyz = os.path.join(tmp_dir, 'yc_xyz_{}.json'.format(index))
+
+    # yc_xyz_res = dict()
+    # yc_xyz = os.path.join(tmp_dir, 'yc_xyz_{}.json'.format(index))
 
     parameters = json.load(open(os.path.join(save_params_dir, 'parameter_green_{}.json'.format(index)), 'r'))
 
     xgb_model = xgb.XGBRegressor(objective="reg:linear", **parameters)
     xgb_model.fit(X_train, y_train)
 
-    # test train data
+    # 落盘 train test data上 xyz结果
+    show_train_test_mse(xgb_model, X_train, X_test, index)
+
+    # test all data
     y_pred = xgb_model.predict(X)
     for ii, item in enumerate(y_pred):
         value = ''.join(str(np.round(a, 3)) for a in X[ii])
@@ -36,14 +63,14 @@ def cross_val(tmp_dir, save_params_dir, X_train, y_train, X, index, rgb_ImgName,
     with open(single_xyz_res, 'w') as js_file:
         js_file.write(data)
 
-    y_pred_yc = xgb_model.predict(yc_x)
-    for ii, item in enumerate(y_pred_yc):
-        value = ''.join(str(np.round(a, 3)) for a in yc_x[ii])
-        info = yc_rgb_ImgName[value]
-        yc_xyz_res[info] = str(item)
-    data = json.dumps(yc_xyz_res)
-    with open(yc_xyz, 'w') as js_file:
-        js_file.write(data)
+    # y_pred_yc = xgb_model.predict(yc_x)
+    # for ii, item in enumerate(y_pred_yc):
+    #     value = ''.join(str(np.round(a, 3)) for a in yc_x[ii])
+    #     info = yc_rgb_ImgName[value]
+    #     yc_xyz_res[info] = str(item)
+    # data = json.dumps(yc_xyz_res)
+    # with open(yc_xyz, 'w') as js_file:
+    #     js_file.write(data)
 
 
 
@@ -78,21 +105,6 @@ def report_best_scores(results, index, save_params_dir, n_top=3):
         js_file.write(data)
 
 
-def hyperparameter_searching_1(X, Y, index, save_params_dir):
-
-    xgb_model = xgb.XGBRegressor()
-    params = {
-        "learning_rate": uniform(0.05, 0.5),
-    }
-
-    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=6, n_iter=200, cv=5, verbose=1,
-                                n_jobs=8, return_train_score=True)
-
-    search.fit(X, Y)
-
-    report_best_scores(search.cv_results_, index, save_params_dir, 5)
-
-
 def hyperparameter_searching(X, Y, index, save_params_dir):
 
     xgb_model = xgb.XGBRegressor()
@@ -100,7 +112,7 @@ def hyperparameter_searching(X, Y, index, save_params_dir):
         "learning_rate": uniform(0.05, 0.2),
     }
 
-    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
+    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=666, n_iter=200, cv=5, verbose=1,
                                 n_jobs=8, return_train_score=True)
 
     search.fit(X, Y)
@@ -108,34 +120,22 @@ def hyperparameter_searching(X, Y, index, save_params_dir):
     report_best_scores(search.cv_results_, index, save_params_dir, 5)
 
 
-def hyperparameter_searching_2(X, Y, index, save_params_dir):
-
-    xgb_model = xgb.XGBRegressor(colsample_bytree=0.924, gamma=0, max_depth=7, n_estimators=131, subsample=0.745)
-    params = {
-        "learning_rate": uniform(0.05, 0.1),
+def grid_search(X, Y, index, save_params_dir):
+    xgb_model = xgb.XGBRegressor()
+    learning_rate = [i*0.01 for i in range(5, 15)]
+    param_grid = {
+        'max_depth': range(3, 10, 2),
+        'min_child_weight': range(1, 6, 2),
+        'n_estimators': range(30, 100, 20),
     }
-
-    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
-                                n_jobs=8, return_train_score=True)
-
-    search.fit(X, Y)
-
-    report_best_scores(search.cv_results_, index, save_params_dir, 5)
-
-
-def hyperparameter_searching_0(X, Y, index, save_params_dir):
-
-    xgb_model = xgb.XGBRegressor(colsample_bytree=0.945, gamma=0, max_depth=5, lr=0.15, subsample=0.9)
-    params = {
-        "n_estimators": randint(80, 150),
-    }
-
-    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
-                                n_jobs=8, return_train_score=True)
-
-    search.fit(X, Y)
-
-    report_best_scores(search.cv_results_, index, save_params_dir, 5)
+    param_grid['learning_rate'] = learning_rate
+    kflod = KFold(n_splits=5, shuffle=True)
+    grid_search = GridSearchCV(xgb_model, param_grid, scoring='neg_mean_squared_error', n_jobs=-1, cv=kflod)
+    grid_result = grid_search.fit(X, Y)
+    print("Best: %f using %s" % (grid_result.best_score_, grid_search.best_params_))
+    data = json.dumps(grid_search.best_params_)
+    with open(os.path.join(save_params_dir,  r'parameter_green_{}.json'.format(index)), 'w') as js_file:
+        js_file.write(data)
 
 
 def lab2xyz(l,a,b):
@@ -171,6 +171,31 @@ def gamma(a):
 
     return a
 
+def gamma_a(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/1.055, 2.4)
+    else:
+        a /= 12.92
+
+    return a
+
+
+def gamma_green(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/0.79, 2.4)
+    else:
+        a /= 12.92
+
+    return a
+
+def gamma_blue(a):
+    if a > 0.04045:
+        a = np.power((a+0.055)/0.85, 2.4)
+    else:
+        a /= 12.92
+
+    return a
+
 
 def show_rgb_gamma(org_rgb, gammed_rgb, green_blue):
     aa = [0, 1, 2]
@@ -196,12 +221,11 @@ def show_b_gamma(org):
     plt.show()
 
 
-def load_data(rgb, lab, index, gammaed=False):
+def load_data(rgb, lab, index, gammaed=False, inference=True):
     X_dict = dict()
     rgb_ImgName = dict()
     X , Y = [], []
     ks = []
-    bad_green_data = []
     gammaed_r, gammaed_g, gammaed_b = [], [], []
     R,G,B = [], [], []
     for k, v in rgb.items():
@@ -216,12 +240,9 @@ def load_data(rgb, lab, index, gammaed=False):
             R.append(r_)
             G.append(g_)
             B.append(b_)
-            gamma_r_ = gamma(r_)
-            gamma_g_ = gamma(g_)
-            gamma_b_ = gamma(b_)
-            k_gb = gamma_g_ / gamma_b_
-            if k_gb < 1:
-                bad_green_data.append(k)
+            gamma_r_ = gamma_a(r_)
+            gamma_g_ = gamma_green(g_)
+            gamma_b_ = gamma_blue(b_)
             gammaed_r.append(gamma_r_)
             gammaed_g.append(gamma_g_)
             gammaed_b.append(gamma_b_)
@@ -233,21 +254,22 @@ def load_data(rgb, lab, index, gammaed=False):
             ks.append(k)
             # rgb_ImgName[''.join(str(a) for a in x)] = k
 
-    for ind in range(len(gammaed_g)):
-        plt.plot([i for i in range(3)], [gammaed_r[ind], gammaed_g[ind], gammaed_b[ind]], color='pink')
+    # for ind in range(len(gammaed_g)):
+    #     plt.plot([i for i in range(3)], [gammaed_r[ind], gammaed_g[ind], gammaed_b[ind]], color='pink')
     # plt.grid()
     # plt.show()
 
     # normalize
     mean_ = np.mean(X, axis=0)
     std_ = np.std(X, axis=0)
-    ff = open('./mean_std.txt', 'w')
-    for m in mean_:
-        ff.write(str(m)+',')
-    ff.write('\n')
-    for m in std_:
-        ff.write(str(m)+',')
-    ff.write('\n')
+    if not inference:
+        ff = open('./mean_std.txt', 'w')
+        for m in mean_:
+            ff.write(str(m)+',')
+        ff.write('\n')
+        for m in std_:
+            ff.write(str(m)+',')
+        ff.write('\n')
 
     X = [[(x[i]-mean_[i])/std_[i] for i in range(len(std_))] for x in X]
     for ind, x in enumerate(X):
@@ -256,36 +278,7 @@ def load_data(rgb, lab, index, gammaed=False):
     X = np.array(X)
     Y = np.array(Y)
 
-    return X, Y, rgb_ImgName, X_dict, bad_green_data
-
-
-def generate_test_data(rgb, lab, index, gammaed=False):
-    X_dict = dict()
-    rgb_ImgName = dict()
-    X , Y = [], []
-    for k, v in rgb.items():
-        r_, g_, b_ = [float(a) / 255 for a in v]
-        if not gammaed:
-            X.append([r_, g_, b_])
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
-            rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
-            X_dict[k] = [r_, g_, b_]
-        else:
-            gamma_r_ = gamma(r_)
-            gamma_g_ = gamma(g_)
-            gamma_b_ = gamma(b_)
-            X.append([gamma_r_, gamma_g_, gamma_b_])
-            X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
-            rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
-
-    X = np.array(X)
-    Y = np.array(Y)
-
     return X, Y, rgb_ImgName, X_dict
-
 
 
 def xyz2lab(x, y, z):
@@ -327,12 +320,12 @@ def check_lab_res(res_txt, seed, tmp_dir, js_y, X_dict):
     yc_z_pred = json.load(open(os.path.join(tmp_dir, 'yc_xyz_2.json'), 'r'))
 
     all_yc = len(yc_x_pred)
-    assert all_yc == 35
-    for k, v in yc_x_pred.items():
-        pre_x, pre_y, pre_z = float(v), float(yc_y_pred[k]), float(yc_z_pred[k])
-        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
-        if (L[0] <= pre_l <= L[1]) and (A[0] <= pre_a <= A[1]) and (B[0] <= pre_b <= B[1]):
-            all_yc -= 1
+    # assert all_yc == 35
+    # for k, v in yc_x_pred.items():
+    #     pre_x, pre_y, pre_z = float(v), float(yc_y_pred[k]), float(yc_z_pred[k])
+    #     pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
+    #     if (L[0] <= pre_l <= L[1]) and (A[0] <= pre_a <= A[1]) and (B[0] <= pre_b <= B[1]):
+    #         all_yc -= 1
     # print("pred yc: {}".format(all_yc))
     c = 0
     l,a,b = 0,0,0
@@ -411,8 +404,8 @@ def overfiting(X, Y, index, save_params_dir):
 
 
 def show_result(all_ngs, RGB):
-    ff = open('./ycs.txt', 'r').readlines()[0]
-    ycs = ff.split(',')[:-1]
+    # ff = open('./ycs.txt', 'r').readlines()[0]
+    # ycs = ff.split(',')[:-1]
 
     import collections
     tmp = collections.Counter(all_ngs)
@@ -421,48 +414,30 @@ def show_result(all_ngs, RGB):
     tmp = []
     print(top_ngs)
     for ng in top_ngs:
-        if ng[1] >= max_ng_time-2:
+        if ng[1] >= max_ng_time-1:
             tmp.append(ng[0])
-    ts = []
-    for t in tmp:
-        if t in ycs:
-            ts.append(t)
-    print("高频出错且是lab异常的样本: {}".format(ts))
 
-    green_test = json.load(open(r'./1209_test_rgb.json', 'r'))
-    for k, v in green_test.items():
-        plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red')
+    # ts = []
+    # for t in tmp:
+    #     if t in ycs:
+    #         ts.append(t)
+    # print("高频出错且是lab异常的样本: {}".format(ts))
+
+    # green_test = json.load(open(r'./1209_test_rgb.json', 'r'))
+    # for k, v in green_test.items():
+    #     plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red')
+
+    ii = 0
+    colors = ['red', 'green', 'blue', 'yellow', 'black', 'purple']
     for k, v in RGB.items():
         if k not in tmp:
-            plt.plot([0,1,2], [gamma(float(a)/255) for a in v], color='pink')
-    for k, v in RGB.items():
-        if k in tmp:
-            plt.plot([0, 1, 2], [gamma(float(a)/255) for a in v], color='blue')
-            print(k, v, LAB[k], v[1]/v[2])
+            plt.plot([0, 1, 2], [gamma_a(float(v[0])/255), gamma_green(float(v[1])/255), gamma_blue(float(v[2])/255)], color='pink')
+        else:
+            print(k, colors[ii])
+            plt.plot([0, 1, 2], [gamma_a(float(v[0])/255), gamma_green(float(v[1])/255), gamma_blue(float(v[2])/255)], color=colors[ii])
+            ii += 1
+    plt.grid()
     plt.show()
-
-
-def get_yc_data():
-    yc_rgb_ImgName = dict()
-    yc_lab = json.load(open(r'./bad_lab.json', 'r'))
-    yc_rgb = json.load(open(r'./bad_rgb.json', 'r'))
-    X = []
-    Y = []
-    ks = []
-    ff = open('./mean_std.txt', 'r')
-    mean_ = [0.029004253081976097, 0.2774517724851633, 0.16223682530526276]
-    std_ = [0.003656373953675619, 0.03987487835872231, 0.023855584464027083]
-    for k, v in yc_rgb.items():
-        x = [gamma(float(a)/255) for a in v]
-        x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
-        ks.append(k)
-        X.append(x)
-        Y.append(yc_lab[k])
-    X = np.array(X)
-    for ind, x in enumerate(X):
-        yc_rgb_ImgName[''.join(str(np.round(a, 3)) for a in x)] = ks[ind]
-
-    return X, Y, yc_rgb_ImgName
 
 
 def get_test_data():
@@ -475,7 +450,7 @@ def get_test_data():
     mean_ = [float(a) for a in ff[0].split(',')[:3]]
     std_ = [float(a) for a in ff[1].split(',')[:3]]
     for k, v in test_rgb.items():
-        x = [gamma(float(a)/255) for a in v]
+        x = [gamma_a(float(v[0])/255), gamma_green(float(v[1])/255), gamma_blue(float(v[2])/255)]
         x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
         ks.append(k)
         X.append(x)
@@ -487,26 +462,26 @@ def get_test_data():
     return X, test_rgb_ImgName
 
 
-def get_yc_data():
-    yc_rgb_ImgName = dict()
-    test_rgb = json.load(open(r'./1209_yc_rgb.json', 'r'))
-
-    X = []
-    ks = []
-    ff = open('./mean_std.txt', 'r').readlines()
-    mean_ = [float(a) for a in ff[0].split(',')[:3]]
-    std_ = [float(a) for a in ff[1].split(',')[:3]]
-    for k, v in test_rgb.items():
-        x = [gamma(float(a)/255) for a in v]
-        x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
-        ks.append(k)
-        X.append(x)
-    X = np.array(X)
-
-    for ind, x in enumerate(X):
-        yc_rgb_ImgName[''.join(str(np.round(a, 3)) for a in x)] = ks[ind]
-
-    return X, yc_rgb_ImgName
+# def get_yc_data():
+#     yc_rgb_ImgName = dict()
+#     test_rgb = json.load(open(r'./1209_yc_rgb.json', 'r'))
+#
+#     X = []
+#     ks = []
+#     ff = open('./mean_std.txt', 'r').readlines()
+#     mean_ = [float(a) for a in ff[0].split(',')[:3]]
+#     std_ = [float(a) for a in ff[1].split(',')[:3]]
+#     for k, v in test_rgb.items():
+#         x = [gamma(float(a)/255) for a in v]
+#         x = [(x[i] - mean_[i]) / std_[i] for i in range(len(std_))]
+#         ks.append(k)
+#         X.append(x)
+#     X = np.array(X)
+#
+#     for ind, x in enumerate(X):
+#         yc_rgb_ImgName[''.join(str(np.round(a, 3)) for a in x)] = ks[ind]
+#
+#     return X, yc_rgb_ImgName
 
 
 def TestReslut(seeds, test_gt):
@@ -599,10 +574,6 @@ def get_gt_lab():
 
 
 def seed_pred_result(seeds):
-    # 删除和吗mean之后结果差异很大的seed_res
-    seeds.remove(165)
-    seeds.remove(440)
-    seeds.remove(495)
     test_lab = dict()
     pred_test_x = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(0, 0)), 'r'))
     for k in pred_test_x:
@@ -625,67 +596,214 @@ def seed_pred_result(seeds):
     test_ks = list(test_lab.keys())
     for k in test_ks:
         test_lab[k] = [a / len(seeds) for a in test_lab[k]]
-    data = json.dumps(test_lab)
-    with open(r'./mean_pred_test_lab.json', 'w') as js_file:
-        js_file.write(data)
-    # print(test_lab)
-    for seed in seeds:
+
+    # diff_seeds = [0]*len(seeds)
+    # for ind, seed in enumerate(seeds):
+    #     pred_res = json.load(open(r'./seed_{}_pred_test_lab.json'.format(seed), 'r'))
+    #     for k, v in pred_res.items():
+    #         if (abs(v[0] - test_lab[k][0]) >= 0.5) or (abs(v[1] - test_lab[k][1]) >= 0.5) or (
+    #                 abs(v[2] - test_lab[k][2]) >= 0.5):
+    #             diff_seeds[ind] += abs(v[0] - test_lab[k][0]) + abs(v[1] - test_lab[k][1]) + abs(v[2] - test_lab[k][2])
+    # tmp = dict()
+    # for ind, diff in enumerate(diff_seeds):
+    #     tmp[str(ind)] = diff
+    # tmp_sort_list = sorted(tmp.items(), key=lambda kv: (kv[1], kv[0]))
+    # removes = [seeds[int(tmp_sort_list[-1][0])], seeds[int(tmp_sort_list[-2][0])], seeds[int(tmp_sort_list[-3][0])]]
+    # print("need remove: {}".format(removes))
+
+    diff_seeds = [0] * len(seeds)
+    for ind, seed in enumerate(seeds):
         pred_res = json.load(open(r'./seed_{}_pred_test_lab.json'.format(seed), 'r'))
         for k, v in pred_res.items():
             if (abs(v[0] - test_lab[k][0]) >= 0.5) or (abs(v[1] - test_lab[k][1]) >= 0.5) or (
                     abs(v[2] - test_lab[k][2]) >= 0.5):
-                print("bad seed: {}".format(seed))
+                diff_seeds[ind] += 1
+    tmp = dict()
+    for ind, diff in enumerate(diff_seeds):
+        tmp[str(ind)] = diff
+    tmp_sort_list = sorted(tmp.items(), key=lambda kv: (kv[1], kv[0]))
+    removes = [seeds[int(tmp_sort_list[-1][0])], seeds[int(tmp_sort_list[-2][0])], seeds[int(tmp_sort_list[-3][0])]]
+    print("need remove: {}".format(removes))
+
+    # 删除和mean之后结果差异很大的seed_res
+    for rev in removes:
+        seeds.remove(rev)
+
+    test_lab = dict()
+    pred_test_x = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(0, 0)), 'r'))
+    for k in pred_test_x:
+        test_lab[k] = [0, 0, 0]
+    for seed in seeds:
+        pred_test_lab = dict()
+        pred_test_x = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 0)), 'r'))
+        pred_test_y = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 1)), 'r'))
+        pred_test_z = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 2)), 'r'))
+        for k, v in pred_test_x.items():
+            pre_x, pre_y, pre_z = float(v), float(pred_test_y[k]), float(pred_test_z[k])
+            predl, preda, predb = xyz2lab(pre_x, pre_y, pre_z)
+            pred_test_lab[k] = [predl, preda, predb]
+            test_lab[k][0] += predl
+            test_lab[k][1] += preda
+            test_lab[k][2] += predb
+    test_ks = list(test_lab.keys())
+    for k in test_ks:
+        test_lab[k] = [a / len(seeds) for a in test_lab[k]]
+
+    bad_test_samples = ['5_2', '5_18', '9_18', '13_15', '15_9', '15_10']
+    green_gt = json.load(
+        open('/Users/chenjia/Downloads/Learning/SmartMore/1110_beijing/1222_beijing/1209/1216zeiss对齐材料/1209_test_lab_gt.json', 'r'))
+    for k, v in test_lab.items():
+        diff = [v[i] - green_gt[k][i] for i in range(3)]
+        if (abs(diff[0]) >= 0.5) or (abs(diff[1]) >= 0.5) or (abs(diff[2]) >= 0.5):
+            if k not in bad_test_samples:
+                print(k, diff)
 
 
 def train_data_all_in_model(test_x, test_rgb_ImgName):
     seed = 0
     for i in range(3):
-        X, Y, rgb_ImgName, X_dict, bad_green_data = load_data(RGB, LAB, i, gammaed=True)
+        X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True, inference=True)
         cross_val_test(seed, tmp_dir, save_params_dir, X, Y, i, test_x, test_rgb_ImgName)
     test_lab = get_test_lab(tmp_dir)
-    ims, Ls, As, Bs = [], [], [], []
-    LAB_range = []
+    # ims, Ls, As, Bs = [], [], [], []
+    # LAB_range = []
+    # for k, v in test_lab.items():
+    #     ims.append(k)
+    #     Ls.append(v[0])
+    #     As.append(v[1])
+    #     Bs.append(v[2])
+    #     LAB_range.append(v[3])
+    # ycy_df = pd.DataFrame()
+    # ycy_df["id"] = ims
+    # ycy_df["L"] = Ls
+    # ycy_df["A"] = As
+    # ycy_df["B"] = Bs
+    # # ycy_df["LAB范围"] = LAB_range
+    # ycy_df.to_csv('./1213.csv')
+    bad_test_samples = ['5_2', '5_18', '9_18', '13_15', '15_9', '15_10']
+    green_gt = json.load(open('/Users/chenjia/Downloads/Learning/SmartMore/1222_beijing/1209/1216zeiss对齐材料/1209_test_lab_gt.json', 'r'))
     for k, v in test_lab.items():
-        ims.append(k)
-        Ls.append(v[0])
-        As.append(v[1])
-        Bs.append(v[2])
-        LAB_range.append(v[3])
-    ycy_df = pd.DataFrame()
-    ycy_df["id"] = ims
-    ycy_df["L"] = Ls
-    ycy_df["A"] = As
-    ycy_df["B"] = Bs
-    # ycy_df["LAB范围"] = LAB_range
-    ycy_df.to_csv('./1213.csv')
+        diff = [v[i] - green_gt[k][i] for i in range(3)]
+        if (abs(diff[0]) >= 0.5) or (abs(diff[1]) >= 0.5) or (abs(diff[2]) >= 0.5):
+            if k not in bad_test_samples:
+                print(k, diff)
+
+
+def show_rgb_lab_distracte(data1_rgb):
+    r, g, b = [], [], []
+    for k, v in data1_rgb.items():
+        r.append(float(data1_rgb[k][0])/255)
+        g.append(float(data1_rgb[k][1])/255)
+        b.append(float(data1_rgb[k][2])/255)
+
+    plt.hist(x=r, bins='auto', color='red', alpha=0.7, rwidth=0.85, label='r')
+    plt.hist(x=g, bins='auto', color='green', alpha=0.7, rwidth=0.85, label='g')
+    plt.hist(x=b, bins='auto', color='blue', alpha=0.7, rwidth=0.85, label='b')
+    plt.grid(axis='y', alpha=0.75)
+    plt.title('rgb')
+    plt.legend()
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
+
+def show_train_test_lab_mse(LAB):
+    # 训模型阶段, 读取train_xyz test_xyz, 然后比较lab的预测mse
+    train_lab = dict()
+    test_lab = dict()
+    tests = []
+    trains = []
+    k_train, k_test = [], []
+    for i in range(3):
+        train_xyz = json.load(open('./train_{}_xyz.json'.format(i), 'r'))
+        test_xyz = json.load(open('./test_{}_xyz.json'.format(i), 'r'))
+        if i == 0:
+            k_train = list(train_xyz.keys())
+            k_test = list(test_xyz.keys())
+        trains.append(train_xyz)
+        tests.append(test_xyz)
+    for k in k_train:
+        train_lab[k] = xyz2lab(float(trains[0][k]), float(trains[1][k]), float(trains[2][k]))
+    for k in k_test:
+        test_lab[k] = xyz2lab(float(tests[0][k]), float(tests[1][k]), float(tests[2][k]))
+
+    pred_train = []
+    gt_train = []
+    for k in train_lab:
+        pred_train.append(train_lab[k])
+        gt_train.append(LAB[k])
+    pred_test = []
+    gt_test = []
+    for k in test_lab:
+        pred_test.append(test_lab[k])
+        gt_test.append(LAB[k])
+
+    train_lab_mse = [mean_squared_error([a[0] for a in pred_train], [a[0] for a in gt_train]),
+                     mean_squared_error([a[1] for a in pred_train], [a[1] for a in gt_train]),
+                     mean_squared_error([a[2] for a in pred_train], [a[2] for a in gt_train])]
+    test_lab_mse = [mean_squared_error([a[0] for a in pred_test], [a[0] for a in gt_test]),
+                    mean_squared_error([a[1] for a in pred_test], [a[1] for a in gt_test]),
+                    mean_squared_error([a[2] for a in pred_test], [a[2] for a in gt_test])]
+
+    print("train_l_mse: {}, test_l_mse: {}".format(train_lab_mse[0], test_lab_mse[0]))
+    print("train_a_mse: {}, test_a_mse: {}".format(train_lab_mse[1], test_lab_mse[1]))
+    print("train_b_mse: {}, test_b_mse: {}".format(train_lab_mse[2], test_lab_mse[2]))
 
 
 if __name__ == "__main__":
 
     LAB = json.load(open(r'./1209_green_lab.json', 'r'))
-    RGB = json.load(open(r'./1209_train_rgb.json', 'r'))
+    RGB = json.load(open(r'./1209_green_rgb.json', 'r'))
 
-    save_params_dir = r'D:\work\project\卡尔蔡司膜色缺陷\1209\params_js_0.92\params_js_0.92'
+    # show_rgb_lab_distracte(RGB)
+
+    # rs,gs,bs = [], [], []
+    # for k, v in RGB.items():
+    #     [r_, g_, b_] = [float(v[i]) / 255 for i in range(3)]
+    #     rs.append(r_)
+    #     gs.append(g_)
+    #     bs.append(b_)
+    # colors = [rs, gs, bs]
+    # for color in colors:
+    #     a_large, a_lower = 0, 0
+    #     for tmp in color:
+    #         if tmp > 0.04045:
+    #             a_large += 1
+    #         else:
+    #             a_lower += 1
+    #     print(a_lower, a_large)
+
+    save_params_dir = r'./params_js_0.92'
     if not os.path.exists(save_params_dir):
         os.mkdir(save_params_dir)
 
     tmp_dir = r'./tmp_xyz_res_js'
     X_dict = dict()
-    test_x, test_rgb_ImgName = get_test_data()
-    yc_x, yc_rgb_ImgName = get_yc_data()
+    test_x, test_rgb_ImgName = None, dict()
+    # yc_x, yc_rgb_ImgName = get_yc_data()
 
     # train model
     all_ngs = []
     res_txt = open(r'./ycy.txt', 'w')
-    seeds = [i * 55 for i in range(10)]
+    seeds = [i * 11 for i in range(10)]
     res = 0
-    for seed in seeds:
+    for seed_ind, seed in enumerate(seeds):
         for i in range(3):
-            X, Y, rgb_ImgName, X_dict, bad_green_data = load_data(RGB, LAB, i, gammaed=True)
+            X, Y, rgb_ImgName, X_dict = load_data(RGB, LAB, i, gammaed=True, inference=False)
+            if i == 0:
+                test_x, test_rgb_ImgName = get_test_data()
+            if seed_ind == 0:
+                # 只在第一个seed搜超参, 因为超参搜索用的是全量X,Y
+                # hyperparameter_searching(X, Y, i, save_params_dir)
+                # grid_search(X, Y, i, save_params_dir)
+                pass
             X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
-            cross_val(tmp_dir, save_params_dir, X_train, y_train, X, i, rgb_ImgName, yc_x, yc_rgb_ImgName)
+            cross_val(tmp_dir, save_params_dir, X_train, y_train, X_test, X, i, rgb_ImgName)
             cross_val_test(seed, tmp_dir, save_params_dir, X_train, y_train, i, test_x, test_rgb_ImgName)
         count, ngs, preds_lab, pre_yc_count = check_lab_res(res_txt, seed, tmp_dir, LAB, X_dict)
+
+        # rgb -> model -> xyz -> lab, 计算lab上的mse, train and test data
+        show_train_test_lab_mse(LAB)
 
         all_ngs.extend(ngs)
         res += count
