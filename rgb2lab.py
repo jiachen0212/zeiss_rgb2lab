@@ -92,7 +92,7 @@ def hyperparameter_searching(X, Y, index, save_params_dir):
 
     xgb_model = xgb.XGBRegressor()
     params = {
-        "learning_rate": uniform(0.05, 0.2),
+        "learning_rate": uniform(0.07, 0.11),
     }
 
     search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
@@ -131,31 +131,6 @@ def hyperparameter_searching_0(X, Y, index, save_params_dir):
     search.fit(X, Y)
 
     report_best_scores(search.cv_results_, index, save_params_dir, 5)
-
-
-def lab2xyz(l,a,b):
-    fy = (l+16.0) / 116.0
-    fx = a / 500.0 + fy
-    fz = fy - b / 200.0
-    if np.power(fy, 3) > 0.008856:
-        y = np.power(fy, 3)
-    else:
-        y = (fy - 16 / 116.0) / 7.787
-
-    if np.power(fx, 3) > 0.008856:
-        x = np.power(fx, 3)
-    else:
-        x = (fx - 16 / 116.0) / 7.787
-
-    if np.power(fz, 3) > 0.008856:
-        z = np.power(fz, 3)
-    else:
-        z = (fz - 16 / 116.0) / 7.787
-    x *= 94.81211415
-    y *= 100
-    z *= 107.3369399
-
-    return [x,y,z]
 
 
 def gamma(a):
@@ -203,8 +178,7 @@ def load_data(rgb, lab, index, gammaed=False):
         [r_, g_, b_] = [float(v[i]) / 255 for i in range(3)]
         if not gammaed:
             X.append([r_, g_, b_])
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
+            Y.append(lab[k][index])
             rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
             X_dict[k] = [r_, g_, b_]
         else:
@@ -223,8 +197,7 @@ def load_data(rgb, lab, index, gammaed=False):
             x = [gamma_r_, gamma_g_, gamma_b_] #  + [np.exp(r_), np.exp(g_), np.exp(b_)]
             X.append(x)
             X_dict[k] = x
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
+            Y.append(lab[k][index])
             ks.append(k)
             # rgb_ImgName[''.join(str(a) for a in x)] = k
 
@@ -262,8 +235,7 @@ def generate_test_data(rgb, lab, index, gammaed=False):
         r_, g_, b_ = [float(a) / 255 for a in v]
         if not gammaed:
             X.append([r_, g_, b_])
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
+            Y.append(lab[k][index])
             rgb_ImgName[''.join(str(a) for a in [r_, g_, b_])] = k
             X_dict[k] = [r_, g_, b_]
         else:
@@ -272,43 +244,13 @@ def generate_test_data(rgb, lab, index, gammaed=False):
             gamma_b_ = gamma(b_)
             X.append([gamma_r_, gamma_g_, gamma_b_])
             X_dict[k] = [gamma_r_, gamma_g_, gamma_b_]
-            v_ = lab2xyz(lab[k][0], lab[k][1], lab[k][2])
-            Y.append(v_[index])
+            Y.append(lab[k][index])
             rgb_ImgName[''.join(str(a) for a in [gamma_r_, gamma_g_, gamma_b_])] = k
 
     X = np.array(X)
     Y = np.array(Y)
 
     return X, Y, rgb_ImgName, X_dict
-
-
-def xyz2lab(x, y, z):
-    x /= 94.81211415
-    y /= 100
-    z /= 107.3369399
-    if y > 0.008856:
-        print("1")
-        fy = np.power(y, 1/3)
-    else:
-        print("2")
-        fy = 7.787 * y + 16 / 116.0
-    if x > 0.008856:
-        print("3")
-        fx = np.power(x, 1/3)
-    else:
-        print("4")
-        fx = 7.787 * x + 16 / 116.0
-    if z > 0.008856:
-        print("5")
-        fz = np.power(z, 1/3)
-    else:
-        print("6")
-        fz = 7.787 * z + 16 / 116.0
-    l = 116 * fy - 16
-    a = 500 * (fx - fy)
-    b = 200 * (fy - fz)
-    return [l, a, b]
-
 
 
 def check_lab_res(res_txt, seed, tmp_dir, js_y, X_dict):
@@ -329,8 +271,7 @@ def check_lab_res(res_txt, seed, tmp_dir, js_y, X_dict):
     all_yc = len(yc_x_pred)
 
     for k, v in yc_x_pred.items():
-        pre_x, pre_y, pre_z = float(v), float(yc_y_pred[k]), float(yc_z_pred[k])
-        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
+        pre_l, pre_a, pre_b = float(v), float(yc_y_pred[k]), float(yc_z_pred[k])
         if (L[0] <= pre_l <= L[1]) and (A[0] <= pre_a <= A[1]) and (B[0] <= pre_b <= B[1]):
             all_yc -= 1
     # print("pred yc: {}".format(all_yc))
@@ -340,8 +281,7 @@ def check_lab_res(res_txt, seed, tmp_dir, js_y, X_dict):
     preds_lab = dict()
     for k, v in x_pred.items():
         real_l, real_a, real_b = js_y[k]
-        pre_x, pre_y, pre_z = float(x_pred[k]), float(y_pred[k]), float(z_pred[k])
-        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
+        pre_l, pre_a, pre_b = float(x_pred[k]), float(y_pred[k]), float(z_pred[k])
         preds_lab[k] = [pre_l, pre_a, pre_b]
 
         if abs(pre_l-real_l) <= 0.5 and abs(pre_a-real_a) <= 0.5 and abs(pre_b-real_b) <= 0.5:
@@ -381,8 +321,7 @@ def get_test_lab(tmp_dir):
 
     pred_lab = dict()
     for k, v in x_pred.items():
-        pre_x, pre_y, pre_z = float(v), float(y_pred[k]), float(z_pred[k])
-        pre_l, pre_a, pre_b = xyz2lab(pre_x, pre_y, pre_z)
+        pre_l, pre_a, pre_b = float(v), float(y_pred[k]), float(z_pred[k])
         pre_l = np.round(pre_l, 2)
         pre_a = np.round(pre_a, 2)
         pre_b = np.round(pre_b, 2)
@@ -432,7 +371,7 @@ def show_result(all_ngs, RGB):
     #     plt.plot([0, 1, 2], [gamma(float(a) / 255) for a in v], color='red')
 
     color_ind = 0
-    colors = ['red', 'blue', 'green', 'yellow', 'black']
+    colors = ['red', 'blue', 'green', 'yellow', 'black', 'cornflowerblue', 'black']
     for k, v in RGB.items():
         if k not in tmp:
             plt.plot([0,1,2], [gamma(float(a)/255) for a in v], color='pink')
@@ -587,8 +526,7 @@ def seed_pred_result(seeds):
         pred_test_y = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 1)), 'r'))
         pred_test_z = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 2)), 'r'))
         for k, v in pred_test_x.items():
-            pre_x, pre_y, pre_z = float(v), float(pred_test_y[k]), float(pred_test_z[k])
-            predl, preda, predb = xyz2lab(pre_x, pre_y, pre_z)
+            predl, preda, predb = float(v), float(pred_test_y[k]), float(pred_test_z[k])
             pred_test_lab[k] = [predl, preda, predb]
             test_lab[k][0] += predl
             test_lab[k][1] += preda
@@ -627,8 +565,7 @@ def seed_pred_result(seeds):
         pred_test_y = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 1)), 'r'))
         pred_test_z = json.load(open(os.path.join(tmp_dir, '{}_test_xyz_{}.json'.format(seed, 2)), 'r'))
         for k, v in pred_test_x.items():
-            pre_x, pre_y, pre_z = float(v), float(pred_test_y[k]), float(pred_test_z[k])
-            predl, preda, predb = xyz2lab(pre_x, pre_y, pre_z)
+            predl, preda, predb = float(v), float(pred_test_y[k]), float(pred_test_z[k])
             pred_test_lab[k] = [predl, preda, predb]
             test_lab[k][0] += predl
             test_lab[k][1] += preda
@@ -691,8 +628,6 @@ if __name__ == "__main__":
 
     del LAB["1_1"]
     del RGB["1_1"]
-    del LAB["3_1"]
-    del RGB["3_1"]
 
     test_rgb = dict()
     for k in list(RGB.keys()):
@@ -718,6 +653,8 @@ if __name__ == "__main__":
         for i in range(3):
             X, Y, rgb_ImgName, X_dict, bad_green_data = load_data(RGB, LAB, i, gammaed=True)
             X_train, X_test, y_train, y_test = TTS(X, Y, test_size=0.2, random_state=seed)
+            # 开启超参数搜索
+            hyperparameter_searching(X, Y, i, save_params_dir)
             cross_val(tmp_dir, save_params_dir, X_train, y_train, X, i, rgb_ImgName, yc_x, yc_rgb_ImgName)
             cross_val_test(seed, tmp_dir, save_params_dir, X_train, y_train, i, test_x, test_rgb_ImgName)
         count, ngs, preds_lab, pre_yc_count = check_lab_res(res_txt, seed, tmp_dir, LAB, X_dict)
@@ -733,9 +670,9 @@ if __name__ == "__main__":
     for k in res1:
         res[k] = [np.round((res1[k][r] + res2[k][r])/2, 2) for r in range(3)]
     print(res)
-    test_gt = json.load(open(r'./0107_test_gt_lab1.json', 'r'))
+    test_gt = json.load(open(r'./0107_test_gt_lab.json', 'r'))
     for k in res:
         abs_diff = [abs(np.round((res[k][r] - test_gt[k][r]), 2)) for r in range(3)]
-        if abs_diff[0] >= 0.5 or abs_diff[1] >= 0.6 or abs_diff[2] >= 0.5:
+        if abs_diff[0] >= 0.5 or abs_diff[1] >= 0.65 or abs_diff[2] >= 0.53:
             print(k, abs_diff)
 
