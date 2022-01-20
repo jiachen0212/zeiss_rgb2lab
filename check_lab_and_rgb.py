@@ -1,8 +1,12 @@
 # coding=utf-8
 import os
 import json
+import random
+import xlrd
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+from utils.util import calculate_Lab
 
 def gamma(a):
     if a > 0.04045:
@@ -158,9 +162,90 @@ def show_rgb_lab_distracte(data1_lab, data1_rgb):
     plt.show()
 
 
+
+def ABCD_light():
+    dir_ = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\不同光源功率值'
+    colors = ['blue', 'black', 'red', 'yellow', 'pink']
+    names = ['D50.txt', 'D55.txt', 'D65.txt', 'D75.txt']   # 'A.txt', 'B.txt', 'C.txt',
+    for ind, txt in enumerate(names):
+        curve = open(os.path.join(dir_, txt), 'r').readlines()
+        curve = [float(a) for a in curve]
+        plt.plot([i*5+380 for i in range(len(curve))], curve, color=colors[ind], label=txt[:-4])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+def show_green_lab_curve(colors):
+    file = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\2022-01-07 测试数据.xlsx'
+    wb = xlrd.open_workbook(file)
+    inds = [i for i in range(2, 19)]
+    inds.remove(3)
+    inds.remove(11)
+    sheets = ["Sheet1+"] + ["Sheet{}".format(ind) for ind in inds] + ["Sheet11+"]
+    all_lab_curve = dict()
+    for sheet in sheets:
+        key = sheet.strip('Shet+')
+        all_lab_curve[key] = []
+        data = wb.sheet_by_name(sheet)
+        rows = data.nrows
+        for i in range(1, rows):
+            row_data = data.row_values(i)
+            curve = row_data[15: 97]
+            if len(curve) > 0:
+                all_lab_curve[key].append(curve)
+        print(sheet, len(all_lab_curve[key]))
+
+    aa = [380+5*i for i in range(81)]
+    for ind, dir_ in enumerate(list(all_lab_curve.keys())):
+        i = 0
+        for curve in all_lab_curve[dir_]:
+            if i == 0:
+                plt.plot(aa, curve, colors[ind], label=dir_)
+                i += 1
+            else:
+                plt.plot(aa, curve, colors[ind])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+def show_blue_lab_curve(colors):
+    file = r'D:\work\project\卡尔蔡司膜色缺陷\1209\膜色识别~测试 12-09th.xlsx'
+    wb = xlrd.open_workbook(file)
+    inds = [i for i in range(16, 22)]
+    inds.remove(17)
+    sheets = ["Sheet17+"] + ["Sheet{}".format(ind) for ind in inds]
+    all_lab_curve = dict()
+    for sheet in sheets:
+        key = sheet.strip('Shet+')
+        all_lab_curve[key] = []
+        data = wb.sheet_by_name(sheet)
+        rows = data.nrows
+        for i in range(1, rows):
+            row_data = data.row_values(i)
+            curve = row_data[14: 97]
+            if len(curve) > 0:
+                all_lab_curve[key].append(curve)
+        print(sheet, len(all_lab_curve[key]))
+
+    aa = [380+5*i for i in range(81)]
+    for ind, dir_ in enumerate(list(all_lab_curve.keys())):
+        i = 0
+        for curve in all_lab_curve[dir_]:
+            if i == 0:
+                plt.plot(aa, curve, colors[ind], label=dir_)
+                i += 1
+            else:
+                plt.plot(aa, curve, colors[ind])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
 if __name__ == "__main__":
-    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\0107\0107lab.json', 'r'))
-    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\0107\0107all.json', 'r'))
+    LAB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\22.01.7data\0107lab.json', 'r'))
+    RGB = json.load(open(r'D:\work\project\卡尔蔡司膜色缺陷\22.01.7data\0107all_erode_dilate.json', 'r'))
     test_data_lab_gt = json.load(open(r'./0107_test_gt_lab.json', 'r'))
     all_lab = dict()
     for k, v in LAB.items():
@@ -168,6 +253,65 @@ if __name__ == "__main__":
     for k, v in test_data_lab_gt.items():
         all_lab[k] = v
 
-    base_green_blue_check_red(all_lab, RGB)
+    data = json.dumps(all_lab)
+    with open(r'./0107_train_test_lab.json', 'w') as js_file:
+        js_file.write(data)
 
-    show_rgb_lab_distracte(all_lab, RGB)
+    assert len(all_lab) == len(RGB)
+
+    # dir3随机留一半测一半
+    dir3_lab = dict()
+    inds = [i for i in range(1, 21)]
+    random.shuffle(inds)
+    test_dir3 = inds[:10]
+    train_dir3 = inds[10:]
+
+    # for k, v in all_lab.items():
+    #     for ind in train_dir3:
+    #         if k == "3_{}".format(ind):
+    #             dir3_lab[k] = v
+    # LAB.update(dir3_lab)
+
+    # 留下7 10
+    # dir7_lab = dict()
+    # for k, v in all_lab.items():
+    #     if k.split("_")[0] == "3":
+    #         dir3_lab[k] = v
+    # LAB.update(dir3_lab)
+    # for k in list(LAB.keys()):
+    #     if k.split("_")[0] == "7":
+    #         dir7_lab[k] = LAB[k]
+    #         del LAB[k]
+    data = json.dumps(LAB)
+    with open(r'./0119_train_lab.json', 'w') as js_file:
+        js_file.write(data)
+    # test_data_lab_gt.update(dir7_lab)
+    # data = json.dumps(test_data_lab_gt)
+    # with open(r'./0107_test_gt_lab1.json', 'w') as js_file:
+    #     js_file.write(data)
+
+
+    # base_green_blue_check_red(all_lab, RGB)
+
+    # show_rgb_lab_distracte(all_lab, RGB)
+
+    # compare ABCD light
+    # ABCD_light()
+
+    # show 0107_data lab_curve
+    colors  = ['aliceblue', 'antiquewhite', 'aliceblue', 'pink', 'red', 'darkslateblue', 'green',
+              'blue', 'yellow', 'black', 'turquoise', 'green', 'cornflowerblue', 'purple', 'black',
+              'cornflowerblue', 'yellow', 'green', 'cornflowerblue', 'purple', 'turquoise']
+    show_green_lab_curve(colors)
+    show_blue_lab_curve(colors)
+
+    # lab_curve2LAb_value
+    # curve = [6.09, 4.1, 2.42, 1.41, 0.83, 0.59, 0.41, 0.27, 0.21, 0.18, 0.42, 0.74, 0.81, 0.85, 0.94, 1.28, 1.49, 1.61, 1.7, 1.8, 1.88, 2.05, 2.31, 2.45, 2.45, 2.42, 2.28, 2.26, 2.41, 2.51, 2.54, 2.4, 2.18, 2.04, 1.78, 1.65, 1.68, 1.58, 1.48, 1.38, 1.1, 0.88, 0.63, 0.46, 0.42, 0.42, 0.28, 0.3, 0.18, 0.18, 0.08, 0.03, 0.38, 0.46, 0.36, 0.67, 0.86, 0.96, 1.15, 1.56, 1.8, 1.95, 2.26, 2.46, 2.88, 3.2, 3.82, 4.18, 4.67, 5.25, 5.63, 6.1, 6.5, 6.93, 7.37, 7.89, 8.34, 8.67, 9.11, 9.79, 10.54]
+    # # # curve = [5.52,3.53,1.97,1.28,0.74,0.7,0.85,1.05,1.23,1.43,1.63,1.82,1.84,1.8,1.75,1.73,1.64,1.49,1.39,1.31,1.23,1.16,1.03,0.91,0.85,0.86,0.84,0.77,0.71,0.64,0.61,0.61,0.58,0.56,0.53,0.46,0.46,0.44,0.41,0.43,0.4,0.39,0.36,0.25,0.19,0.17,0.21,0.19,0.17,0.17,0.2,0.2,0.16,0.20,0.26,0.35,0.41,0.57,0.64,0.71,0.9,1.04,1.17,1.27,1.43,1.56,1.82,2.07,2.4,2.72,3.02,3.33,3.58,3.87,3.97,4.34,4.57,4.73,5.03,5.45,5.94]
+    # L, a, b = calculate_Lab(curve)
+    # print(L, a, b)
+
+
+
+
+
