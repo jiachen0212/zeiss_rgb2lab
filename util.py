@@ -228,4 +228,4 @@ def calculate_Lab(curve):
     a = 500 * (fXxn - fYyn)
     b = 200 * (fYyn - fZzn)
     # print("Lab value: L: {}, a: {}, b: {}".format(L, a, b))
-    return L, a, b
+    return np.round(L, 2), np.round(a, 2), np.round(b, 2)
