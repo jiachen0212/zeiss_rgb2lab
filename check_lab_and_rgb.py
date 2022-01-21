@@ -177,12 +177,13 @@ def ABCD_light():
 
 
 def show_green_lab_curve(colors):
-    file = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\2022-01-07 测试数据.xlsx'
+    file = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\0118zeiss_膜色缺陷对齐\2022-01-07 原始数据.xlsx'
     wb = xlrd.open_workbook(file)
     inds = [i for i in range(2, 19)]
     inds.remove(3)
     inds.remove(11)
-    sheets = ["Sheet1+"] + ["Sheet{}".format(ind) for ind in inds] + ["Sheet11+"]
+    sheets = ["Sheet1+", "Sheet3+"] + ["Sheet{}".format(ind) for ind in inds] + ["Sheet11+"]
+    print(len(sheets))
     all_lab_curve = dict()
     for sheet in sheets:
         key = sheet.strip('Shet+')
@@ -299,18 +300,16 @@ if __name__ == "__main__":
     # ABCD_light()
 
     # show 0107_data lab_curve
-    colors  = ['aliceblue', 'antiquewhite', 'aliceblue', 'pink', 'red', 'darkslateblue', 'green',
-              'blue', 'yellow', 'black', 'turquoise', 'green', 'cornflowerblue', 'purple', 'black',
-              'cornflowerblue', 'yellow', 'green', 'cornflowerblue', 'purple', 'turquoise']
+    colors = ['pink', 'black', 'darkslateblue', 'green','blue', 'yellow', 'purple', 'green', 'cornflowerblue', 'red', 'turquoise'
+              ,'dodgerblue', 'gray', 'hotpink', 'lavenderblush', 'darkseagreen', 'ghostwhite', 'firebrick']
+
     show_green_lab_curve(colors)
-    show_blue_lab_curve(colors)
+    # show_blue_lab_curve(colors)
 
     # lab_curve2LAb_value
-    # curve = [6.09, 4.1, 2.42, 1.41, 0.83, 0.59, 0.41, 0.27, 0.21, 0.18, 0.42, 0.74, 0.81, 0.85, 0.94, 1.28, 1.49, 1.61, 1.7, 1.8, 1.88, 2.05, 2.31, 2.45, 2.45, 2.42, 2.28, 2.26, 2.41, 2.51, 2.54, 2.4, 2.18, 2.04, 1.78, 1.65, 1.68, 1.58, 1.48, 1.38, 1.1, 0.88, 0.63, 0.46, 0.42, 0.42, 0.28, 0.3, 0.18, 0.18, 0.08, 0.03, 0.38, 0.46, 0.36, 0.67, 0.86, 0.96, 1.15, 1.56, 1.8, 1.95, 2.26, 2.46, 2.88, 3.2, 3.82, 4.18, 4.67, 5.25, 5.63, 6.1, 6.5, 6.93, 7.37, 7.89, 8.34, 8.67, 9.11, 9.79, 10.54]
-    # # # curve = [5.52,3.53,1.97,1.28,0.74,0.7,0.85,1.05,1.23,1.43,1.63,1.82,1.84,1.8,1.75,1.73,1.64,1.49,1.39,1.31,1.23,1.16,1.03,0.91,0.85,0.86,0.84,0.77,0.71,0.64,0.61,0.61,0.58,0.56,0.53,0.46,0.46,0.44,0.41,0.43,0.4,0.39,0.36,0.25,0.19,0.17,0.21,0.19,0.17,0.17,0.2,0.2,0.16,0.20,0.26,0.35,0.41,0.57,0.64,0.71,0.9,1.04,1.17,1.27,1.43,1.56,1.82,2.07,2.4,2.72,3.02,3.33,3.58,3.87,3.97,4.34,4.57,4.73,5.03,5.45,5.94]
-    # L, a, b = calculate_Lab(curve)
-    # print(L, a, b)
-
+    curve = [6.09, 4.1, 2.42, 1.41, 0.83, 0.59, 0.41, 0.27, 0.21, 0.18, 0.42, 0.74, 0.81, 0.85, 0.94, 1.28, 1.49, 1.61, 1.7, 1.8, 1.88, 2.05, 2.31, 2.45, 2.45, 2.42, 2.28, 2.26, 2.41, 2.51, 2.54, 2.4, 2.18, 2.04, 1.78, 1.65, 1.68, 1.58, 1.48, 1.38, 1.1, 0.88, 0.63, 0.46, 0.42, 0.42, 0.28, 0.3, 0.18, 0.18, 0.08, 0.03, 0.38, 0.46, 0.36, 0.67, 0.86, 0.96, 1.15, 1.56, 1.8, 1.95, 2.26, 2.46, 2.88, 3.2, 3.82, 4.18, 4.67, 5.25, 5.63, 6.1, 6.5, 6.93, 7.37, 7.89, 8.34, 8.67, 9.11, 9.79, 10.54]
+    L, a, b = calculate_Lab(curve)
+    print(L, a, b)
 
 
 
