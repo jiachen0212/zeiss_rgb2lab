@@ -193,7 +193,8 @@ def weights(X, Y, Z, S, Xn, Yn, Zn):
 
 
 def calculate_Lab(curve):
-    light_guangpu = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\不同光源功率值\C.txt'
+    # 膜色推优使用测量使用的是C/2光源, 我这个用得是D65/10的光源
+    light_guangpu = r'D:\work\project\卡尔蔡司膜色缺陷\阶段结论文档\不同光源功率值\D65.txt'
     guangpu = open(light_guangpu, 'r').readlines()
     S = [float(a) for a in guangpu]
     # S = [33.0, 39.92, 47.4, 55.17, 63.3, 71.81, 80.6, 89.53, 98.1, 105.8, 112.4, 117.75, 121.5, 123.45, 124.0, 123.6,
@@ -204,9 +205,9 @@ def calculate_Lab(curve):
     XYZ_fun = r'D:\work\project\卡尔蔡司AR镀膜\文档s\蔡司资料0615\Lab计算及膜厚范围.xlsx'
     wb = xlrd.open_workbook(XYZ_fun)
     data = wb.sheet_by_name(r'色分配函数')
-    fx = data.col_values(2)[4:]
-    fy = data.col_values(3)[4:]
-    fz = data.col_values(4)[4:]
+    fx = data.col_values(5)[4:]
+    fy = data.col_values(6)[4:]
+    fz = data.col_values(7)[4:]
     Xn = fun1(fx, fy, S)
     Yn = fun1(fy, fy, S)
     Zn = fun1(fz, fy, S)
