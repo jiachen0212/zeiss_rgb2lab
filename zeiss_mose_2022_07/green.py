@@ -115,10 +115,12 @@ def hyperparameter_searching(X, Y, index, save_params_dir):
 
     xgb_model = xgb.XGBRegressor()
     params = {
-        "learning_rate": uniform(0.05, 0.2),
+        "learning_rate": uniform(0.05, 0.2),   
+        # 'reg_alpha': uniform(0., 2), 
+        # 'reg_lambda': uniform(0., 2), 
     }
 
-    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=666, n_iter=200, cv=5, verbose=1,
+    search = RandomizedSearchCV(xgb_model, param_distributions=params, random_state=42, n_iter=200, cv=5, verbose=1,
                                 n_jobs=8, return_train_score=True)
 
     search.fit(X, Y)
@@ -630,7 +632,7 @@ def seed_pred_result(seeds):
     for ind, diff in enumerate(diff_seeds):
         tmp[str(ind)] = diff
     tmp_sort_list = sorted(tmp.items(), key=lambda kv: (kv[1], kv[0]))
-    print(tmp_sort_list)
+    # print(tmp_sort_list)
     # removes = [seeds[int(tmp_sort_list[-1][0])], seeds[int(tmp_sort_list[-2][0])], seeds[int(tmp_sort_list[-3][0])]]
     removes = [seeds[int(tmp_sort_list[-1][0])]]
     print("need remove: {}".format(removes))
@@ -761,7 +763,6 @@ def show_train_test_lab_mse(LAB):
     print("train_l_mse: {}, test_l_mse: {}".format(train_lab_mse[0], test_lab_mse[0]))
     print("train_a_mse: {}, test_a_mse: {}".format(train_lab_mse[1], test_lab_mse[1]))
     print("train_b_mse: {}, test_b_mse: {}".format(train_lab_mse[2], test_lab_mse[2]))
-
 
 
 def lab_range_check(LAB):
